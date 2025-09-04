@@ -3,9 +3,20 @@ import { createUser, getUsers } from '@/actions/todoAction';
 import React from 'react'
 
 const HomePage = async () => {
-  let users = [] as Array<{ id: number; name: string; email: string }>;
+  let users = [] as Array<{
+    id: string;
+    clerkId: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+    bio: string | null;
+    siteRole: "user" | "admin";
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+  }>;
   try {
-    // await createUser("John Doe", "john@example.com");
+    // await createUser("John Doe", "john@example.com", "someClerkId");
     // await createUser("Jane Doe", "jane@example.com");
     users = await getUsers();
     console.log(`users: ${JSON.stringify(users)}`);
@@ -34,6 +45,7 @@ const HomePage = async () => {
         <div key={user.id}>
           <h2 className='text-xl font-semibold'>{user.name}</h2>
           <p className='text-gray-600'>{user.email}</p>
+          {/* Optionally display more user info if needed */}
         </div>
       ))}</p>
     </div>

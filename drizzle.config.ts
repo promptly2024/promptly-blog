@@ -10,7 +10,7 @@ export default defineConfig({
     schema: "./db/schema.ts",
     out: "./db/migrations",
     dbCredentials: {
-        url: process.env.DATABASE_URL || "postgresql://postgres:mysecretpassword@localhost:5432/postgres",
+        url: process.env.DATABASE_URL || "postgresql://postgres:12345@localhost:5432/promptlyblog",
         ssl: true
     }
 });
