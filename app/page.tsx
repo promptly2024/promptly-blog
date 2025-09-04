@@ -17,11 +17,11 @@ const HomePage = async () => {
     deletedAt: Date | null;
   }>;
   try {
-    syncUser();
+    await syncUser();
     // await createUser("John Doe", "john@example.com", "someClerkId");
     // await createUser("Jane Doe", "jane@example.com");
     users = await getUsers();
-    console.log(`users: ${JSON.stringify(users)}`);
+    // console.log(`users: ${JSON.stringify(users)}`);
   } catch (error) {
     console.error(`Error occurred: ${error}`);
   }
