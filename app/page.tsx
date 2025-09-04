@@ -54,6 +54,11 @@ const HomePage = async () => {
           {/* Optionally display more user info if needed */}
         </div>
       ))}</p>
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold"><a href='/write'>Create a New Post</a></h2>
+
+      </div>
     </div>
   )
 }
