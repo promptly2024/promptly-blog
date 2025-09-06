@@ -1,4 +1,4 @@
-import { posts } from '@/db/schema';
+import { media, posts } from '@/db/schema';
 import { db } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { Metadata } from 'next';
@@ -21,22 +21,74 @@ const isUUID = (id: string): boolean => {
 
 const getBlogData = async (id: string): Promise<BlogType | null> => {
     try {
-        let post;
+        let postQuery;
+
         if (!isUUID(id)) {
             // Search by slug
-            post = await db.select()
+            postQuery = db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    slug: posts.slug,
+                    excerpt: posts.excerpt,
+                    contentMd: posts.contentMd,
+                    coverImageId: posts.coverImageId,
+                    ogImageUrl: posts.ogImageUrl,
+                    canonicalUrl: posts.canonicalUrl,
+                    metaTitle: posts.metaTitle,
+                    metaDescription: posts.metaDescription,
+                    createdAt: posts.createdAt,
+                    updatedAt: posts.updatedAt,
+
+                    // image info from media
+                    coverImage: {
+                        id: media.id,
+                        url: media.url,
+                        type: media.type,
+                        altText: media.altText,
+                        provider: media.provider,
+                    }
+                })
                 .from(posts)
+                .leftJoin(media, eq(posts.coverImageId, media.id))
                 .where(eq(posts.slug, id))
-                .limit(1)
-                .execute();
+                .limit(1);
         } else {
             // Search by ID
-            post = await db.select()
+            postQuery = db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    slug: posts.slug,
+                    excerpt: posts.excerpt,
+                    contentMd: posts.contentMd,
+                    coverImageId: posts.coverImageId,
+                    ogImageUrl: posts.ogImageUrl,
+                    canonicalUrl: posts.canonicalUrl,
+                    metaTitle: posts.metaTitle,
+                    metaDescription: posts.metaDescription,
+                    createdAt: posts.createdAt,
+                    updatedAt: posts.updatedAt,
+
+                    // image info
+                    coverImage: {
+                        id: media.id,
+                        url: media.url,
+                        type: media.type,
+                        altText: media.altText,
+                        provider: media.provider,
+                    }
+                })
                 .from(posts)
+                .leftJoin(media, eq(posts.coverImageId, media.id))
                 .where(eq(posts.id, id))
-                .limit(1)
-                .execute();
+                .limit(1);
         }
+
+        const post = await postQuery.execute();
+
+        if (!post[0]) return null;
+
         // Serialize the document
         const serializedPost = serializeDocument(post[0]);
         return serializedPost || null;

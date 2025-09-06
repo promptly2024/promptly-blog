@@ -42,11 +42,11 @@ const BlogContent: React.FC<BlogContentProps> = ({ post }) => {
                 </div>
 
                 {/* Cover image */}
-                {post.ogImageUrl && (
+                {post.coverImage?.url && (
                     <div className="mb-8">
                         <img
-                            src={post.ogImageUrl}
-                            alt={post.title}
+                            src={post.coverImage.url}
+                            alt={post.coverImage.altText || `${post.title} cover image`}
                             className="w-full h-96 object-cover rounded-lg shadow-lg"
                         />
                     </div>

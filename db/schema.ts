@@ -137,10 +137,7 @@ export const media = pgTable(
         url: text("url").notNull(),
         type: varchar("type", { length: 32 }).notNull(), // image|video|audio|file
         provider: varchar("provider", { length: 64 }).default("other").notNull(), // s3|cloudinary|vercel-blob|other
-        width: integer("width"),
-        height: integer("height"),
-        sizeBytes: integer("size_bytes"),
-
+        altText: varchar("alt_text", { length: 255 }),
         createdBy: uuid("created_by").references(() => user.id),
         createdAt: timestamp("created_at", { withTimezone: true })
             .defaultNow()

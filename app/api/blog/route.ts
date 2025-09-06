@@ -110,8 +110,9 @@ export async function POST(request: NextRequest) {
         const author = authorResult[0];
 
         // Validate cover image if provided
+        let imageResult: typeof media.$inferSelect[] = [];
         if (coverImageId) {
-            const imageResult = await db.select()
+            imageResult = await db.select()
                 .from(media)
                 .where(eq(media.id, coverImageId))
                 .limit(1);
@@ -119,6 +120,10 @@ export async function POST(request: NextRequest) {
             if (imageResult.length === 0) {
                 return NextResponse.json({ error: "Cover image not found." }, { status: 404 });
             }
+            console.log("\n\nCover image validated:", imageResult[0]);
+        } else {
+            imageResult = [];
+            console.log("\n\nNo cover image provided, proceeding without it.");
         }
 
         // Generate unique slug
@@ -144,7 +149,7 @@ export async function POST(request: NextRequest) {
             title,
             contentMd,
             excerpt: autoExcerpt,
-            coverImageId: coverImageId || null,
+            coverImageId: imageResult.length > 0 ? imageResult[0].id : null,
             authorId: author.id,
             slug: finalSlug,
             canonicalUrl,
@@ -171,6 +176,10 @@ export async function POST(request: NextRequest) {
                 title: createdPost.title,
                 slug: createdPost.slug,
                 status: createdPost.status,
+                visibility: createdPost.visibility,
+                authorId: createdPost.authorId,
+                excerpt: createdPost.excerpt,
+                coverImageId: createdPost.coverImageId,
                 canonicalUrl: createdPost.canonicalUrl,
                 wordCount: createdPost.wordCount,
                 readingTimeMins: createdPost.readingTimeMins,

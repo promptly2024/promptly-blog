@@ -23,4 +23,15 @@ export interface BlogType {
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+
+    coverImage?: MediaType
+}
+export interface MediaType {
+    id: string
+    url: string
+    type: string   // image | video | audio | file
+    provider: string // s3 | cloudinary | vercel-blob | other
+    altText?: string
+    createdBy?: string
+    createdAt?: Date
 }
