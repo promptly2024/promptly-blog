@@ -49,7 +49,7 @@ export default function BlogEditor({ post }: { post?: any }) {
 
             const data = await response.json();
             toast.success('Post created successfully!', {
-                description: "Your post has been created and is now live.",
+                description: `${JSON.stringify(data)}`,
                 action: { label: 'View Post', onClick: () => { window.location.href = `/blog/${data.slug}`; } }
             });
             setFormData({ title: "", slug: "", excerpt: "", contentMd: "", coverImageId: "", metaTitle: "", metaDescription: "", status: "draft", visibility: "public", scheduledAt: "" });
