@@ -144,7 +144,8 @@ function LoadingBlogs() {
     );
 }
 
-export default async function BlogsPage({ searchParams }: BlogsPageProps) {
+export default async function BlogsPage(props: BlogsPageProps) {
+    const searchParams = await props.searchParams;
     const blogsData = await fetchBlogs(searchParams);
 
     return (
