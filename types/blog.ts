@@ -26,6 +26,12 @@ export interface BlogType {
 
     coverImage?: MediaType
 }
+
+export interface CategoryType {
+    id: string
+    name: string
+    createdAt: Date
+}
 export interface MediaType {
     id: string
     url: string

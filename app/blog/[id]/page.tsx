@@ -1,97 +1,40 @@
-import { media, posts } from '@/db/schema';
-import { db } from '@/lib/db';
-import { eq } from 'drizzle-orm';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import BlogContent from '@/components/BlogContent';
-import { BlogType } from '@/types/blog';
+import { BlogType, CategoryType } from '@/types/blog';
 import { serializeDocument } from '@/utils/date-formatter';
+import { showError } from '@/app/edit/[id]/page';
+import { getUserIdFromClerk, fetchPostWithCategories, fetchAllCategories } from '@/utils/blog-helper';
 
-// Define the expected type for the props
+/// Define the expected type for the props
 interface BlogPageProps {
     params: Promise<{
         id: string;
     }>;
 }
 
-const isUUID = (id: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(id);
-};
-
-const getBlogData = async (id: string): Promise<BlogType | null> => {
+const getBlogData = async (id: string) => {
     try {
-        let postQuery;
+        const userId = await getUserIdFromClerk();
+        // promise all to fetch post and categories concurrently
+        if (!userId) throw new Error("User not authenticated.");
 
-        if (!isUUID(id)) {
-            // Search by slug
-            postQuery = db
-                .select({
-                    id: posts.id,
-                    title: posts.title,
-                    slug: posts.slug,
-                    excerpt: posts.excerpt,
-                    contentMd: posts.contentMd,
-                    coverImageId: posts.coverImageId,
-                    ogImageUrl: posts.ogImageUrl,
-                    canonicalUrl: posts.canonicalUrl,
-                    metaTitle: posts.metaTitle,
-                    metaDescription: posts.metaDescription,
-                    createdAt: posts.createdAt,
-                    updatedAt: posts.updatedAt,
+        const [postData, allCategories] = await Promise.all([
+            fetchPostWithCategories(id, userId, true),
+            fetchAllCategories()
+        ]);
 
-                    // image info from media
-                    coverImage: {
-                        id: media.id,
-                        url: media.url,
-                        type: media.type,
-                        altText: media.altText,
-                        provider: media.provider,
-                    }
-                })
-                .from(posts)
-                .leftJoin(media, eq(posts.coverImageId, media.id))
-                .where(eq(posts.slug, id))
-                .limit(1);
-        } else {
-            // Search by ID
-            postQuery = db
-                .select({
-                    id: posts.id,
-                    title: posts.title,
-                    slug: posts.slug,
-                    excerpt: posts.excerpt,
-                    contentMd: posts.contentMd,
-                    coverImageId: posts.coverImageId,
-                    ogImageUrl: posts.ogImageUrl,
-                    canonicalUrl: posts.canonicalUrl,
-                    metaTitle: posts.metaTitle,
-                    metaDescription: posts.metaDescription,
-                    createdAt: posts.createdAt,
-                    updatedAt: posts.updatedAt,
+        if (!postData) return null;
 
-                    // image info
-                    coverImage: {
-                        id: media.id,
-                        url: media.url,
-                        type: media.type,
-                        altText: media.altText,
-                        provider: media.provider,
-                    }
-                })
-                .from(posts)
-                .leftJoin(media, eq(posts.coverImageId, media.id))
-                .where(eq(posts.id, id))
-                .limit(1);
-        }
+        // Serialize post and categories
+        const serializedPost = serializeDocument(postData) as BlogType;
+        const serializedCategories = postData.categories.map(serializeDocument) as CategoryType[];
 
-        const post = await postQuery.execute();
-
-        if (!post[0]) return null;
-
-        // Serialize the document
-        const serializedPost = serializeDocument(post[0]);
-        return serializedPost || null;
+        return {
+            post: serializedPost,
+            category: serializedCategories,
+            categories: allCategories
+        };
     } catch (error) {
         console.error('Error fetching blog data:', error);
         return null;
@@ -101,7 +44,8 @@ const getBlogData = async (id: string): Promise<BlogType | null> => {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
     const { id } = await params;
-    const post = await getBlogData(id);
+    const result = await getBlogData(id);
+    const post = result?.post;
 
     if (!post) {
         return {
@@ -143,11 +87,11 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 
 const BlogPage = async ({ params }: BlogPageProps) => {
     const { id } = await params;
-    const post = await getBlogData(id);
+    const result = await getBlogData(id);
+    const post = result?.post;
 
-    // Return 404 if post not found or not published
-    if (!post) {
-        notFound();
+    if (!result || !post) {
+        return showError('Blog post not found or you do not have permission to view this post.');
     }
 
     // if (post.status !== 'published' || post.visibility !== 'public') {
