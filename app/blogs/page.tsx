@@ -4,7 +4,6 @@ import { Metadata } from 'next';
 import BlogsFilters from './components/BlogsFilters';
 import BlogsContent from './components/BlogsContents';
 import BlogsPagination from './components/BlogsPagination';
-import { media } from '@/db/schema';
 
 export const metadata: Metadata = {
     title: 'All Blog Posts | Your Blog Name',
