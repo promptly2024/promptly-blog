@@ -1,4 +1,3 @@
-// app/blogs/BlogsFilters.tsx
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -6,8 +5,6 @@ import { useState, useCallback } from 'react';
 
 interface BlogsFiltersProps {
     currentFilters: {
-        status?: string;
-        visibility?: string;
         authorId?: string;
         sortBy: string;
         sortOrder: string;
@@ -15,8 +12,6 @@ interface BlogsFiltersProps {
     searchParams: {
         page?: string;
         limit?: string;
-        status?: string;
-        visibility?: string;
         authorId?: string;
         sortBy?: string;
         sortOrder?: string;
@@ -30,8 +25,6 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
 
     // Local state for form inputs
     const [filters, setFilters] = useState({
-        status: searchParams.status || '',
-        visibility: searchParams.visibility || '',
         authorId: searchParams.authorId || '',
         sortBy: searchParams.sortBy || 'createdAt',
         sortOrder: searchParams.sortOrder || 'desc',
@@ -44,6 +37,9 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
 
         // Always reset to page 1 when filters change
         params.set('page', '1');
+
+        // Always set status=published
+        params.set('status', 'published');
 
         // Add non-empty parameters
         Object.entries(newFilters).forEach(([key, value]) => {
@@ -65,8 +61,6 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
 
     const clearAllFilters = () => {
         const clearedFilters = {
-            status: '',
-            visibility: '',
             authorId: '',
             sortBy: 'createdAt',
             sortOrder: 'desc',
@@ -77,7 +71,7 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
         updateURL(clearedFilters);
     };
 
-    const hasActiveFilters = filters.status || filters.visibility || filters.authorId || filters.search;
+    const hasActiveFilters = filters.search;
 
     return (
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
@@ -108,41 +102,6 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
                         placeholder="Search titles, content..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                </div>
-
-                {/* Status Filter */}
-                <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                    </label>
-                    <select
-                        id="status"
-                        value={filters.status}
-                        onChange={(e) => handleFilterChange('status', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                        <option value="">All Status</option>
-                        <option value="published">Published</option>
-                        <option value="draft">Draft</option>
-                        <option value="scheduled">Scheduled</option>
-                    </select>
-                </div>
-
-                {/* Visibility Filter */}
-                <div>
-                    <label htmlFor="visibility" className="block text-sm font-medium text-gray-700 mb-1">
-                        Visibility
-                    </label>
-                    <select
-                        id="visibility"
-                        value={filters.visibility}
-                        onChange={(e) => handleFilterChange('visibility', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                        <option value="">All Visibility</option>
-                        <option value="public">Public</option>
-                        <option value="private">Private</option>
-                    </select>
                 </div>
 
                 {/* Sort By */}
@@ -206,28 +165,6 @@ export default function BlogsFilters({ currentFilters, searchParams }: BlogsFilt
                 <div className="mt-4 pt-4 border-t border-gray-200">
                     <div className="flex flex-wrap gap-2">
                         <span className="text-sm text-gray-600">Active filters:</span>
-                        {filters.status && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                Status: {filters.status}
-                                <button
-                                    onClick={() => handleFilterChange('status', '')}
-                                    className="ml-1 text-blue-600 hover:text-blue-800"
-                                >
-                                    ×
-                                </button>
-                            </span>
-                        )}
-                        {filters.visibility && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                Visibility: {filters.visibility}
-                                <button
-                                    onClick={() => handleFilterChange('visibility', '')}
-                                    className="ml-1 text-green-600 hover:text-green-800"
-                                >
-                                    ×
-                                </button>
-                            </span>
-                        )}
                         {filters.search && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
                                 Search: "{filters.search}"

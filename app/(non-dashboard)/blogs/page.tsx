@@ -77,8 +77,10 @@ async function fetchBlogs(searchParams: BlogsPageProps['searchParams']): Promise
     const params = new URLSearchParams();
     if (searchParams.page) params.set('page', searchParams.page);
     if (searchParams.limit) params.set('limit', searchParams.limit);
-    if (searchParams.status) params.set('status', searchParams.status);
-    if (searchParams.visibility) params.set('visibility', searchParams.visibility);
+    // Always force status=published
+    params.set('status', 'published');
+    // if (searchParams.status) params.set('status', searchParams.status);
+    // if (searchParams.visibility) params.set('visibility', searchParams.visibility);
     if (searchParams.authorId) params.set('authorId', searchParams.authorId);
     if (searchParams.sortBy) params.set('sortBy', searchParams.sortBy);
     if (searchParams.sortOrder) params.set('sortOrder', searchParams.sortOrder);
@@ -187,18 +189,7 @@ export default async function BlogsPage(props: BlogsPageProps) {
                         </div>
 
                         {/* Quick stats */}
-                        <div className="text-sm text-gray-500">
-                            {searchParams.status && (
-                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">
-                                    Status: {searchParams.status}
-                                </span>
-                            )}
-                            {searchParams.visibility && (
-                                <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded mr-2">
-                                    Visibility: {searchParams.visibility}
-                                </span>
-                            )}
-                        </div>
+                        {/* Status/visibility chips removed */}
                     </div>
 
                     {/* Blog Posts */}
@@ -210,16 +201,6 @@ export default async function BlogsPage(props: BlogsPageProps) {
                             pagination={blogsData.pagination}
                             searchParams={searchParams}
                         />
-                    )}
-
-                    {/* Debug Info (only in development) */}
-                    {process.env.NODE_ENV === 'development' && (
-                        <details className="mt-8 p-4 bg-gray-100 rounded">
-                            <summary className="cursor-pointer font-medium">Debug Info</summary>
-                            <pre className="mt-2 text-xs overflow-x-auto">
-                                {JSON.stringify({ searchParams, filters: blogsData.filters, pagination: blogsData.pagination }, null, 2)}
-                            </pre>
-                        </details>
                     )}
                 </Suspense>
             </div>
