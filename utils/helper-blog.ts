@@ -51,3 +51,13 @@ export function isValidUrl(url: string): boolean {
         return false;
     }
 }
+
+export function makeValidSlug(input: string): string {
+    return input
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/[^a-z0-9-]/g, '') // Remove special characters
+        .replace(/--+/g, '-') // Replace multiple dashes with a single dash
+        .replace(/^-+|-+$/g, ''); // Remove leading and trailing dashes
+}

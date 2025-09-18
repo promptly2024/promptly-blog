@@ -2,7 +2,7 @@
 import { EditorSection } from '@/components/Write/ContentMD';
 import ThumbnailSection from '@/components/Write/Thumbnail';
 import { useRouter } from 'next/navigation';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from 'sonner';
 import {
     Save,
@@ -24,6 +24,7 @@ import {
     Plus
 } from 'lucide-react';
 import { BlogType, CategoryType } from '@/types/blog';
+import { makeValidSlug } from '@/utils/helper-blog';
 
 // Loading Spinner Component
 const LoadingSpinner = ({ className = "" }) => (
@@ -146,6 +147,17 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
     });
     const router = useRouter();
 
+    useEffect(() => {
+        if (formData?.slug) {
+            const handler = setTimeout(() => {
+                const validSlug = makeValidSlug(formData.slug);
+                setFormData(prev => ({ ...prev, slug: validSlug }));
+            }, 1000);
+
+            return () => clearTimeout(handler);
+        }
+    }, [formData?.slug]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, multiple, options } = e.target as HTMLSelectElement;
         if (name === "categoryId" && multiple) {
@@ -177,10 +189,8 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
 
         setIsGeneratingTitle(true);
         try {
-            // Simulate AI API call
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // Mock AI-generated title based on content
             const mockTitles = [
                 "The Ultimate Guide to Modern Web Development",
                 "10 Essential Tips for Better Code Quality",

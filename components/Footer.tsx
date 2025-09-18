@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { act } from 'react';
 import {
     PenTool,
     Mail,
@@ -121,7 +121,12 @@ const Footer = () => {
                 return;
             }
             await new Promise((resolve) => setTimeout(resolve, 2000));
-            toast.success(`Subscribed with ${NewsletterEmail}`);
+            toast.success(`Subscribed with ${NewsletterEmail}`, {
+                description: "Thank you for subscribing to our newsletter!, DB not implemented yet.",
+                action: {
+                    label: "Close", onClick: () => toast.dismiss()
+                }
+            });
             setNewsletterEmail('');
         } catch (error) {
             console.error('Subscription failed:', error);
