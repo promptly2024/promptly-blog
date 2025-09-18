@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobile, isOp
                     </div>
                     {(!isCollapsed || isMobile) && (
                         <div>
-                            <h1 className="text-xl font-bold text-slate-800">Promptly</h1>
+                            <h1 className="text-xl font-bold text-slate-800">Promptly Blog</h1>
                             <p className="text-xs text-slate-500">Dashboard</p>
                         </div>
                     )}
@@ -370,7 +370,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 />
 
                 {/* Page Content */}
-                <main className="relative">
+                <main className="relative ml-10 lg:ml-0 p-6 md:p-8 lg:p-10">
                     {children}
                 </main>
             </div>
