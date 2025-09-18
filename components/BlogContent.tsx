@@ -120,19 +120,20 @@ const BlogContent: React.FC<BlogContentProps> = ({ post }) => {
                     <p>
                         Last updated: {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}
                     </p>
-                    {post.canonicalUrl && post.canonicalUrl !== window.location.href && (
-                        <p className="mt-2">
-                            Originally published at:{' '}
-                            <a
-                                href={post.canonicalUrl}
-                                className="text-blue-600 hover:text-blue-800 underline"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                {post.canonicalUrl}
-                            </a>
-                        </p>
-                    )}
+                    {post.canonicalUrl &&
+                        (typeof window === 'undefined' || post.canonicalUrl !== window.location.href) && (
+                            <p className="mt-2">
+                                Originally published at:{' '}
+                                <a
+                                    href={post.canonicalUrl}
+                                    className="text-blue-600 hover:text-blue-800 underline"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    {post.canonicalUrl}
+                                </a>
+                            </p>
+                        )}
                 </div>
             </footer>
         </article>
