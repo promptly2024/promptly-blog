@@ -28,122 +28,103 @@ interface BlogsContentProps {
 }
 
 function PostCard({ post }: { post: BlogPost }) {
-    const publishedDate = post.publishedAt ? new Date(post.publishedAt) : new Date(post.createdAt);
-    const isPublished = post.status === 'published';
-    const isScheduled = post.status === 'scheduled';
-    const isDraft = post.status === 'draft';
+  const publishedDate = post.publishedAt ? new Date(post.publishedAt) : new Date(post.createdAt);
+  const isPublished = post.status === 'published';
+  const isScheduled = post.status === 'scheduled';
+  const isDraft = post.status === 'draft';
 
-    return (
-        <article className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-200">
-            <div className="p-6">
-                {/* Status and visibility badges */}
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex space-x-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isPublished ? 'bg-green-100 text-green-800' :
-                            isScheduled ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                            }`}>
-                            {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
-                        </span>
+  return (
+    <article className="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+      <div className="flex flex-col md:flex-row items-start md:items-center p-6 gap-6">
+        {/* Content Left */}
+        <div className="flex-1 flex flex-col">
+          {/* Status & Visibility badges */}
+          <div className="flex space-x-2 mb-2 flex-wrap">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isPublished ? 'bg-green-100 text-green-800' : isScheduled ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+              {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+            </span>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${post.visibility === 'public' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+              {post.visibility.charAt(0).toUpperCase() + post.visibility.slice(1)}
+            </span>
+          </div>
 
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${post.visibility === 'public' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                            {post.visibility.charAt(0).toUpperCase() + post.visibility.slice(1)}
-                        </span>
-                    </div>
+          {/* Title */}
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-2 line-clamp-2">
+            <Link href={`/blog/${post.slug}`} className="hover:text-blue-600 transition-colors">
+              {post.title}
+            </Link>
+          </h2>
 
-                    {/* Reading time and word count */}
-                    <div className="flex items-center space-x-3 text-xs text-gray-500">
-                        {post.readingTimeMins && (
-                            <span className="flex items-center">
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                                </svg>
-                                {post.readingTimeMins} min
-                            </span>
-                        )}
-                        {post.wordCount && (
-                            <span>{post.wordCount.toLocaleString()} words</span>
-                        )}
-                    </div>
-                </div>
+          {/* Excerpt */}
+          {post.excerpt && (
+            <p className="text-gray-700 mb-4 line-clamp-3 leading-relaxed text-base">
+              {post.excerpt}
+            </p>
+          )}
 
-                {/* Title */}
-                <h2 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
-                    <Link
-                        href={`/blog/${post.slug}`}
-                        className="hover:text-blue-600 transition-colors"
-                    >
-                        {post.title}
-                    </Link>
-                </h2>
+          {/* Metadata & Reading Time */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <time
+              dateTime={publishedDate.toISOString()}
+              title={format(publishedDate, 'PPP p')}
+              className="whitespace-nowrap"
+            >
+              {isPublished ? 'Published' : 'Created'} {formatDistanceToNow(publishedDate, { addSuffix: true })}
+            </time>
 
-                {/* Excerpt */}
-                {post.excerpt && (
-                    <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
-                        {post.excerpt}
-                    </p>
-                )}
-                {
-                    post.coverImageUrl &&
-                    <img src={post.coverImageUrl} alt={post.coverImageAltText || ""} content="image" className="w-full h-auto rounded-lg" />
-                }
+            {isScheduled && post.scheduledAt && (
+              <span className="text-yellow-600 whitespace-nowrap">
+                Scheduled for {format(new Date(post.scheduledAt), 'PPP p')}
+              </span>
+            )}
 
-                {/* Metadata */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        {/* Published/Created date */}
-                        <time
-                            dateTime={publishedDate.toISOString()}
-                            title={format(publishedDate, 'PPP p')}
-                        >
-                            {isPublished ? 'Published' : 'Created'} {formatDistanceToNow(publishedDate, { addSuffix: true })}
-                        </time>
+            {new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime() && (
+              <span className="whitespace-nowrap">
+                Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}
+              </span>
+            )}
 
-                        {/* Scheduled date if applicable */}
-                        {isScheduled && post.scheduledAt && (
-                            <span className="text-yellow-600">
-                                Scheduled for {format(new Date(post.scheduledAt), 'PPP p')}
-                            </span>
-                        )}
+            {post.readingTimeMins && (
+              <span className="flex items-center whitespace-nowrap">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                {post.readingTimeMins} min read
+              </span>
+            )}
 
-                        {/* Updated date if different from created */}
-                        {new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime() && (
-                            <span>
-                                Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}
-                            </span>
-                        )}
-                    </div>
+            {post.wordCount && <span className="whitespace-nowrap">{post.wordCount.toLocaleString()} words</span>}
+          </div>
+        </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center space-x-2">
-                        <Link
-                            href={`/blog/${post.slug}`}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-                        >
-                            Read more →
-                        </Link>
-                    </div>
-                </div>
+        {/* Image Right */}
+        {post.coverImageUrl && (
+          <div className="w-full md:w-48 flex-shrink-0 rounded-lg overflow-hidden shadow-sm">
+            <img
+              src={post.coverImageUrl}
+              alt={post.coverImageAltText || ""}
+              className="w-full h-32 md:h-36 object-cover object-center rounded-lg"
+              loading="lazy"
+              width={192}
+              height={144}
+            />
+          </div>
+        )}
+      </div>
 
-                {/* Debug info for development */}
-                {process.env.NODE_ENV === 'development' && (
-                    <details className="mt-4 pt-3 border-t border-gray-100">
-                        <summary className="text-xs text-gray-400 cursor-pointer">Debug Info</summary>
-                        <div className="mt-2 text-xs text-gray-400 space-y-1">
-                            <div>ID: {post.id}</div>
-                            <div>Author ID: {post.authorId}</div>
-                            <div>Slug: {post.slug}</div>
-                            <div>Created: {format(new Date(post.createdAt), 'PPP p')}</div>
-                            {post.metaTitle && <div>Meta Title: {post.metaTitle}</div>}
-                            {post.metaDescription && <div>Meta Description: {post.metaDescription}</div>}
-                        </div>
-                    </details>
-                )}
-            </div>
-        </article>
-    );
+      {/* Footer: read more link */}
+      <div className="border-t border-gray-100 px-6 py-3 text-right">
+        <Link
+          href={`/blog/${post.slug}`}
+          className="text-blue-600 font-medium hover:text-blue-800 transition-colors"
+        >
+          Read more →
+        </Link>
+      </div>
+    </article>
+  );
 }
+
 
 function EmptyState() {
     return (
@@ -186,41 +167,33 @@ function EmptyState() {
 }
 
 function PostStats({ posts }: { posts: BlogPost[] }) {
-    const publishedCount = posts.filter(p => p.status === 'published').length;
-    const draftCount = posts.filter(p => p.status === 'draft').length;
-    const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
-    const totalWordCount = posts.reduce((sum, post) => sum + (post.wordCount || 0), 0);
-    const totalReadingTime = posts.reduce((sum, post) => sum + (post.readingTimeMins || 0), 0);
+  const publishedCount = posts.filter((p) => p.status === 'published').length;
+  const totalWordCount = posts.reduce((sum, post) => sum + (post.wordCount || 0), 0);
+  const totalReadingTime = posts.reduce((sum, post) => sum + (post.readingTimeMins || 0), 0);
 
-    if (posts.length === 0) return null;
+  if (posts.length === 0) return null;
 
-    return (
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Current Page Statistics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-                <div>
-                    <div className="text-2xl font-bold text-green-600">{publishedCount}</div>
-                    <div className="text-xs text-gray-600">Published</div>
-                </div>
-                <div>
-                    <div className="text-2xl font-bold text-gray-600">{draftCount}</div>
-                    <div className="text-xs text-gray-600">Drafts</div>
-                </div>
-                <div>
-                    <div className="text-2xl font-bold text-yellow-600">{scheduledCount}</div>
-                    <div className="text-xs text-gray-600">Scheduled</div>
-                </div>
-                <div>
-                    <div className="text-2xl font-bold text-blue-600">{totalWordCount.toLocaleString()}</div>
-                    <div className="text-xs text-gray-600">Total Words</div>
-                </div>
-                <div>
-                    <div className="text-2xl font-bold text-purple-600">{totalReadingTime}</div>
-                    <div className="text-xs text-gray-600">Min Reading</div>
-                </div>
-            </div>
+  return (
+    <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+      <h3 className="text-sm font-medium text-gray-900 mb-3">Current Page Statistics</h3>
+      <div className="grid grid-cols-3 gap-4 text-center justify-center max-w-lg mx-auto">
+        <div>
+          <div className="text-2xl font-bold text-green-600">{publishedCount}</div>
+          <div className="text-xs text-gray-600">Published</div>
         </div>
-    );
+
+        <div>
+          <div className="text-2xl font-bold text-blue-600">{totalWordCount.toLocaleString()}</div>
+          <div className="text-xs text-gray-600">Total Words</div>
+        </div>
+
+        <div>
+          <div className="text-2xl font-bold text-purple-600">{totalReadingTime}</div>
+          <div className="text-xs text-gray-600">Min Reading</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function BlogsContent({ posts }: BlogsContentProps) {
