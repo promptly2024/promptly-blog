@@ -27,16 +27,15 @@
 10. Improved blog middleware for better *route protection* and secure access control.  
 
 ---
-
 > 19 Sep 2025 — Rohit Kumar Yadav
 
-1. Added *@radix-ui/react-checkbox* dependency for scalable UI components.  
-2. Implemented custom *Checkbox component* inside `components/ui/checkbox.tsx`.  
-3. Built *Helper.tsx* to enhance blog management with analytics, bulk actions, and status badges.  
-4. Integrated Checkbox into *EnhancedBlogCard* for blog selection functionality.  
-5. Refactored *BlogsFilters* to streamline filtering logic and improve maintainability.  
-6. Improved *media deletion* logic by using *transactions* for safer database operations.  
-7. Updated *pnpm-lock.yaml* to include new Radix dependencies.  
-8. Enhanced UI consistency by unifying filter, card, and selection components.  
-9. Performed cleanup and optimization across blog management features.  
-10. Validated integration to ensure bulk selection + deletion works seamlessly in UI.  
+1. Created *My Blogs* page in the user dashboard to display all blogs authored by the logged-in user.  
+2. Implemented *frontend-only blog management* features including edit, delete, archive, duplicate, and download reports.  
+3. Developed *search and filter functionality* for efficient blog discovery.  
+4. Added *list view and grid view toggles* to provide flexible visualization of blogs.  
+5. Integrated *tab-based navigation* to organize blogs by status (All, Draft, Submitted, Under Review, Approved, Scheduled, Published, Rejected, Archived).  
+6. Built tab counters showing real-time blog counts for each status (e.g., Draft: 11, Published: 3, etc.).  
+7. Designed responsive *UI for blog cards* to display blog metadata consistently across views.  
+8. Created *helper function* to fetch all blogs of a specific user and pass data to My Blogs page.  
+9. Enhanced *blog management UX* by introducing quick actions on each blog card.  
+10. Conducted end-to-end validation of search, filters, views, and tab navigation for smooth user experience.  
