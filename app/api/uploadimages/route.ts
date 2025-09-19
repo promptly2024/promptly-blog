@@ -119,12 +119,13 @@ export async function GET(request: Request) {
   }
 }
 
-// Delete endpoint to delete images the user is using to create the blogs it can be from unsplash or cloudinary
+// Delete endpoint to delete images the user is using to create the blogs
 export async function DELETE(request: Request) {
   try {
     const clerkUser = await syncUser();
-    if (!clerkUser?.id)
+    if (!clerkUser?.id) {
       return NextResponse.json({ error: "Unauthorized, please log in." }, { status: 401 });
+    }
 
     const { id, publicId } = await request.json();
 
@@ -145,15 +146,25 @@ export async function DELETE(request: Request) {
       where: (m) => eq(m.id, id) && eq(m.createdBy, dbUser.id),
     });
     if (!dbMedia) {
-      return NextResponse.json({ error: "Media not found or not owned by user." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Media not found or not owned by user." },
+        { status: 404 }
+      );
     }
 
-    // Nullify coverImageId in posts referencing this media
-    await db.update(posts)
-      .set({ coverImageId: null })
-      .where(eq(posts.coverImageId, id));
+    // Run DB changes in a transaction
+    await db.transaction(async (tx) => {
+      // Nullify coverImageId in posts referencing this media
+      await tx
+        .update(posts)
+        .set({ coverImageId: null })
+        .where(eq(posts.coverImageId, id));
 
-    // Delete image from Cloudinary if applicable
+      // Delete media record
+      await tx.delete(media).where(eq(media.id, id));
+    });
+
+    // Delete from Cloudinary outside transaction (external API can't be rolled back)
     if (
       publicId &&
       typeof publicId === "string" &&
@@ -163,16 +174,16 @@ export async function DELETE(request: Request) {
         await cloudinary.uploader.destroy(publicId);
       } catch (err) {
         console.error("Cloudinary delete error:", err);
-        // proceed with DB deletion anyway
+        // Not fatal: DB already consistent
       }
     }
-
-    // Delete media record from database
-    await db.delete(media).where(eq(media.id, id));
 
     return NextResponse.json({ message: "Image deleted." }, { status: 200 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error." },
+      { status: 500 }
+    );
   }
 }

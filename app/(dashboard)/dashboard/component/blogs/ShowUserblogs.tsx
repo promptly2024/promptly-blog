@@ -33,13 +33,11 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
 
     // Existing state
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<string>('all');
-    const [selectedVisibility, setSelectedVisibility] = useState<string>('all');
     const [sortBy, setSortBy] = useState<string>('updatedAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [activeTab, setActiveTab] = useState('all');
     const [showFilters, setShowFilters] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
     // New state
     const [selectedBlogs, setSelectedBlogs] = useState<string[]>([]);
@@ -49,8 +47,6 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
     // Initialize from URL params (existing code)
     useEffect(() => {
         setSearchQuery(searchParams.get('search') || '');
-        setSelectedStatus(searchParams.get('status') || 'all');
-        setSelectedVisibility(searchParams.get('visibility') || 'all');
         setSortBy(searchParams.get('sortBy') || 'updatedAt');
         setSortOrder(searchParams.get('sortOrder') as 'asc' | 'desc' || 'desc');
         setActiveTab(searchParams.get('tab') || 'all');
@@ -81,14 +77,6 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
             );
         }
 
-        if (selectedStatus !== 'all') {
-            filtered = filtered.filter(blog => blog.status === selectedStatus);
-        }
-
-        if (selectedVisibility !== 'all') {
-            filtered = filtered.filter(blog => blog.visibility === selectedVisibility);
-        }
-
         if (activeTab !== 'all') {
             filtered = filtered.filter(blog => blog.status === activeTab);
         }
@@ -111,7 +99,7 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
         });
 
         return filtered;
-    }, [blogs, searchQuery, selectedStatus, selectedVisibility, sortBy, sortOrder, activeTab]);
+    }, [blogs, searchQuery, sortBy, sortOrder, activeTab]);
 
     // Blog counts (existing)
     const blogCounts = useMemo(() => {
@@ -247,8 +235,6 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
 
     const clearAllFilters = () => {
         setSearchQuery('');
-        setSelectedStatus('all');
-        setSelectedVisibility('all');
         setActiveTab('all');
         updateUrlParams('search', '');
         updateUrlParams('status', '');
@@ -256,7 +242,7 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
         updateUrlParams('tab', '');
     };
 
-    const hasActiveFilters = searchQuery || selectedStatus !== 'all' || selectedVisibility !== 'all' || activeTab !== 'all';
+    const hasActiveFilters = searchQuery || activeTab !== 'all';
     const allSelected = selectedBlogs.length === filteredAndSortedBlogs.length && filteredAndSortedBlogs.length > 0;
 
     return (
@@ -350,9 +336,9 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
                     </div>
 
                     {/* Enhanced Filters */}
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 ${showFilters ? 'block' : 'hidden lg:grid'}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${showFilters ? 'block' : 'hidden lg:grid'}`}>
                         {/* Status Filter */}
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        {/* <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="All statuses" />
                             </SelectTrigger>
@@ -370,7 +356,7 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
                         </Select>
 
                         {/* Visibility Filter */}
-                        <Select value={selectedVisibility} onValueChange={setSelectedVisibility}>
+                        {/* <Select value={selectedVisibility} onValueChange={setSelectedVisibility}>
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="All visibility" />
                             </SelectTrigger>
@@ -385,7 +371,7 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
                                     </SelectItem>
                                 ))}
                             </SelectContent>
-                        </Select>
+                        </Select> */}
 
                         {/* Sort */}
                         <Select value={sortBy} onValueChange={handleSortChange}>
