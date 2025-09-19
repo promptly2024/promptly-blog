@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { db } from "@/lib/db";
 import { eq, and, sql } from "drizzle-orm";
+import { pgEnum } from "drizzle-orm/pg-core";
 
 // Utility to keep consistent API responses
 const serializeDocument = (doc: any) => ({
@@ -18,6 +19,7 @@ const serializeDocument = (doc: any) => ({
     updatedAt: doc.updatedAt?.toISOString?.(),
     publishedAt: doc.publishedAt?.toISOString?.(),
     scheduledAt: doc.scheduledAt?.toISOString?.(),
+    deletedAt: doc.deletedAt?.toISOString?.(),
 });
 
 export const fetchAllPostsByUserId = async (
@@ -33,7 +35,7 @@ export const fetchAllPostsByUserId = async (
         : baseCondition;
 
     // Select posts with metadata
-    const allPosts = await db
+    const allPostsRaw = await db
         .select({
             id: posts.id,
             title: posts.title,
@@ -65,6 +67,7 @@ export const fetchAllPostsByUserId = async (
             approvedAt: posts.approvedAt,
             rejectedAt: posts.rejectedAt,
             rejectionReason: posts.rejectionReason,
+            deletedAt: posts.deletedAt,
 
             // Analytics
             wordCount: posts.wordCount,
@@ -85,6 +88,8 @@ export const fetchAllPostsByUserId = async (
             media.altText
         )
         .execute();
+
+    const allPosts: UsersBlogType[] = allPostsRaw.map(serializeDocument);
 
     // Fetch categories + tags separately (since they’re many-to-many)
     const postIds = allPosts.map((p) => p.id);
@@ -130,3 +135,48 @@ export const fetchAllPostsByUserId = async (
     // }));
     return allPosts;
 };
+
+export interface UsersBlogType {
+    id: string;
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    contentMd: string;
+
+    // Media
+    coverImageId: string | null;
+    coverImageUrl: string | null;
+    coverImageAlt: string | null;
+
+    // SEO
+    ogImageUrl: string | null;
+    canonicalUrl: string | null; // <-- changed from string to string | null
+    metaTitle: string | null;    // <-- changed from string to string | null
+    metaDescription: string | null; // <-- changed from string to string | null
+
+    // Status & visibility
+    status: BlogStatusType;
+    visibility: BlogVisibilityType;
+
+    // Dates
+    createdAt: string | null;    // <-- changed from string to string | null
+    updatedAt: string | null;
+    publishedAt: string | null;
+    scheduledAt: string | null;
+    submittedAt: string | null;
+    approvedAt: string | null;
+    rejectedAt: string | null;
+    rejectionReason: string | null;
+    deletedAt: string | null;
+
+    // Analytics
+    wordCount: number;
+    readingTimeMins: number;
+
+    // Derived counts (comments, reactions)
+    commentCount: number;
+    reactionCount: number;
+}
+
+export type BlogStatusType = "draft" | "submitted" | "under_review" | "approved" | "scheduled" | "published" | "rejected" | "archived";
+export type BlogVisibilityType = "public" | "unlisted" | "private";

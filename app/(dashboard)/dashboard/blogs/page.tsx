@@ -1,25 +1,24 @@
-import { fetchAllPostsByUserId } from '@/actions/fetchAllPostByUser'
+import { fetchAllPostsByUserId, UsersBlogType } from '@/actions/fetchAllPostByUser'
 import { showError } from '@/app/(non-dashboard)/edit/[id]/page';
-import { BlogType } from '@/types/blog';
 import { getUserIdFromClerk } from '@/utils/blog-helper'
 import React from 'react'
+import ShowUserblogs from '../component/blogs/ShowUserblogs';
 
 const ManageBlogs = async () => {
-    let Blogs: BlogType[] = [];
+    let Blogs: UsersBlogType[] = [];
+    let errorMessages: string | null = null;
     try {
         const userId = await getUserIdFromClerk();
         const data = await fetchAllPostsByUserId(userId, false);
-        // Blogs = data;
+        Blogs = data;
     } catch (err) {
-        showError('Error fetching blogs. Please try again later.');
-        console.error('Error fetching user ID:', err);
+        errorMessages = err instanceof Error ? err.message : String(err);
+    }
+    if (errorMessages) {
+        return showError(errorMessages);
     }
     return (
-        <div>
-            <h1>Manage Blogs</h1>
-            <p>Welcome to the Manage Blogs section of your dashboard!</p>
-            {JSON.stringify(Blogs)}
-        </div>
+        <ShowUserblogs blogs={Blogs} />
     )
 }
 
