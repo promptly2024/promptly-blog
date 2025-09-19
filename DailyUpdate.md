@@ -1,17 +1,17 @@
-Update 17-18 Sep 2025 Rohit Kumar Yadav
+> Update 17 Sep 2025 Rohit Kumar Yadav
 
-1. Implemented PUT API for updating blog posts with authorization and validation.
-2. Enhanced BlogPage to fetch post data and categories concurrently for better performance.
-3. Created a unified BlogEditor component for both creating and editing posts, with pre-filled data in edit mode.
-4. Added AI-powered title generation in BlogEditor (frontend only).
-5. Improved error handling, validation, and integrated category selection and thumbnail upload in BlogEditor.
-6. Developed a Markdown editor with live preview, including EditorHeader, EditorFooter, and loading skeleton components.
-7. Introduced reusable Skeleton UI and EditorLoadingSkeleton for improved user experience.
-8. Refactored codebase with modular utility helpers for validation, user/post ID extraction, and data fetching.
-9. Implemented advanced blog filtering, pagination, and editing features with BlogsFilters and BlogsPagination components.
-10. Expanded dashboard structure with new pages (Analytics, Manage Blogs, Bookmarks, Help, Media, Notifications, Settings) and added a 404 error page.
+1. Implemented PUT API method for updating blog posts with authorization and validation.
+2. Enhanced BlogPage to fetch post data and categories concurrently.
+3. Created a common BlogEditor component for both create and edit; in edit mode, data is pre-fetched and passed to the component.
+4. Added AI-based title generation in BlogEditor (frontend only).
+5. Improved error handling, validation, and integrated category selection + thumbnail upload in BlogEditor.
+6. Developed Markdown editor with live preview, EditorHeader, EditorFooter, and loading skeleton components.
+7. Introduced reusable Skeleton UI and EditorLoadingSkeleton for better UX.
+8. Refactored code by creating modular utils helpers like isValidUUID/slug, getUserIdFromClerk, getPostIdFromSlug/Id.
+9. Built common helper functions to fetch post data for /blog/[id] and /edit/[id] routes.
+10. Updated BlogsPage props destructuring and enhanced middleware route protection.
 
-18 Sep 2025 Rohit Kumar Yadav
+> 18 Sep 2025 Rohit Kumar Yadav
 feat: implement PUT method for updating blog posts with authorization and validation
 feat: enhance BlogPage to fetch post data and categories concurrently
 feat: create EditBlog page with BlogEditor component for editing posts
@@ -44,3 +44,12 @@ feat: Implement blog filtering, pagination, and editing features
 feat: Implement dashboard structure with new pages for Analytics, Manage Blogs, Bookmarks, Help, Media Management, Notifications, and Settings; add 404 error page
 
 19 Sep 2025 Rohit Kumar Yadav
+
+feat: add Radix UI Checkbox component and integrate into blog management UI
+
+- Added @radix-ui/react-checkbox dependency to package.json
+- Implemented Checkbox component using Radix UI in components/ui/checkbox.tsx
+- Created Helper.tsx for enhanced blog management features including analytics, bulk actions, and status badges
+- Integrated Checkbox component into EnhancedBlogCard for selection functionality
+- Updated pnpm-lock.yaml to include new dependencies
+
