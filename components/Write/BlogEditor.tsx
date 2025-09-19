@@ -19,9 +19,7 @@ import {
     Sparkles,
     Crown,
     Tag,
-    Zap,
     Wand2,
-    Plus
 } from 'lucide-react';
 import { BlogType, CategoryType } from '@/types/blog';
 import { makeValidSlug } from '@/utils/helper-blog';
@@ -112,7 +110,6 @@ const StatusBadge = ({ status }: { status: string }) => {
         scheduled: { icon: Clock, color: 'bg-orange-100 text-orange-700 border-orange-200', text: 'Scheduled' },
         published: { icon: CheckCircle, color: 'bg-green-100 text-green-700 border-green-200', text: 'Published' }
     };
-
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
     const IconComponent = config.icon;
 
@@ -143,7 +140,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
         status: post?.status || "draft",
         visibility: post?.visibility || "public",
         scheduledAt: post?.scheduledAt || "",
-        categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : []
+        categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : [],
     });
     const router = useRouter();
 
@@ -153,7 +150,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                 const validSlug = makeValidSlug(formData.slug);
                 setFormData(prev => ({ ...prev, slug: validSlug }));
             }, 1000);
-
             return () => clearTimeout(handler);
         }
     }, [formData?.slug]);
@@ -168,7 +164,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
-        // Clear error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -186,11 +181,9 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
             toast.error('Please add some content first to generate a title');
             return;
         }
-
         setIsGeneratingTitle(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 2000));
-
             const mockTitles = [
                 "The Ultimate Guide to Modern Web Development",
                 "10 Essential Tips for Better Code Quality",
@@ -198,7 +191,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                 "Building Scalable Applications with React",
                 "The Art of Clean Architecture"
             ];
-
             const generatedTitle = mockTitles[Math.floor(Math.random() * mockTitles.length)];
             setFormData(prev => ({ ...prev, title: generatedTitle }));
             toast.success('Title generated successfully!');
@@ -211,33 +203,20 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-
-        if (!formData.title.trim()) {
-            newErrors.title = "Title is required";
-        }
-
-        if (!formData.contentMd.trim()) {
-            newErrors.contentMd = "Content is required";
-        }
-
-        if (formData.status === "scheduled" && !formData.scheduledAt) {
-            newErrors.scheduledAt = "Scheduled date and time are required for scheduled posts";
-        }
-
+        if (!formData.title.trim()) newErrors.title = "Title is required";
+        if (!formData.contentMd.trim()) newErrors.contentMd = "Content is required";
+        if (formData.status === "scheduled" && !formData.scheduledAt) newErrors.scheduledAt = "Scheduled date and time are required for scheduled posts";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
         if (!validateForm()) {
             toast.error('Please fix the errors in the form');
             return;
         }
-
         setIsSubmitting(true);
-
         try {
             const endpoint = mode === 'edit' ? `/api/blog/${post?.id}` : '/api/blog';
             const method = mode === 'edit' ? 'PUT' : 'POST';
@@ -268,7 +247,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                     status: "draft",
                     visibility: "public",
                     scheduledAt: "",
-                    categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : []
+                    categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : [],
                 });
             }
         } catch (error: any) {
@@ -286,20 +265,17 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
     };
 
     const handlePreview = () => {
-        // Open preview in new tab or modal
         toast.info('Preview feature coming soon!');
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-slate-50">
-            {/* Background Pattern */}
             <div className="absolute inset-0 opacity-30">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-sky-400/10 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
             </div>
 
             <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                {/* Header */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6 mb-6 sm:mb-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
                         <div className="flex items-center space-x-4">
@@ -321,10 +297,8 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                     </div>
                 </div>
 
-                {/* Main Form */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6 lg:p-8">
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Title Section */}
                         <FormField label="Post Title" icon={FileText} required error={errors.title}>
                             <div className="space-y-3">
                                 <div className="flex flex-col sm:flex-row gap-3">
@@ -334,7 +308,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                         value={formData.title}
                                         onChange={handleChange}
                                         placeholder="Enter your post title..."
-                                        className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800 placeholder-slate-400"
+                                        className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                         required
                                     />
                                     <AIButton
@@ -351,7 +325,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                             </div>
                         </FormField>
 
-                        {/* Category Section */}
                         {categories.length > 0 && (
                             <FormField label="Category" icon={Tag}>
                                 <select
@@ -360,7 +333,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                     multiple
                                     value={formData.categoryId}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                 >
                                     <option value="">Select categories</option>
                                     {categories.map((category) => (
@@ -372,7 +345,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                             </FormField>
                         )}
 
-                        {/* Thumbnail Section */}
                         <FormField label="Cover Image" icon={Image}>
                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                                 <ThumbnailSection
@@ -382,7 +354,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                             </div>
                         </FormField>
 
-                        {/* Content Editor */}
                         <FormField label="Content" icon={Edit3} required error={errors.contentMd}>
                             <div className="border border-slate-200 rounded-xl overflow-hidden">
                                 <EditorSection
@@ -392,7 +363,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                             </div>
                         </FormField>
 
-                        {/* Custom URL Slug */}
                         <FormField
                             label="Custom URL"
                             icon={Globe}
@@ -411,7 +381,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                             value={formData.slug}
                                             onChange={handleChange}
                                             placeholder="custom-url-slug"
-                                            className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-r-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800 placeholder-slate-400"
+                                            className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-r-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                         />
                                     </div>
                                 </div>
@@ -424,7 +394,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                             </div>
                         </FormField>
 
-                        {/* Settings Section */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             <FormField label="Status" icon={CheckCircle}>
                                 <select
@@ -432,7 +401,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                     name="status"
                                     value={formData.status}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                 >
                                     <option value="draft">Draft</option>
                                     <option value="submitted">Submitted</option>
@@ -447,7 +416,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                     name="visibility"
                                     value={formData.visibility}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800"
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                 >
                                     <option value="public">Public</option>
                                     <option value="private">Private</option>
@@ -462,20 +431,19 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                         name="scheduledAt"
                                         value={formData.scheduledAt}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all duration-200 text-slate-800"
+                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
                                         required
                                     />
                                 </FormField>
                             )}
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4 pt-6 border-t border-slate-200">
                             <div className="flex items-center space-x-4">
                                 <button
                                     type="button"
                                     onClick={handlePreview}
-                                    className="flex items-center space-x-2 px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                                    className="flex items-center space-x-2 px-4 py-2 text-slate-600 hover:text-slate-800"
                                     disabled={isSubmitting}
                                 >
                                     <Eye className="w-4 h-4" />
@@ -487,7 +455,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                 <button
                                     type="button"
                                     onClick={() => router.back()}
-                                    className="w-full sm:w-auto px-6 py-3 text-slate-600 hover:text-slate-800 transition-colors"
+                                    className="w-full sm:w-auto px-6 py-3 text-slate-600 hover:text-slate-800"
                                     disabled={isSubmitting}
                                 >
                                     Cancel
@@ -495,7 +463,7 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
 
                                 <button
                                     type="submit"
-                                    className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-8 py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-8 py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting ? (

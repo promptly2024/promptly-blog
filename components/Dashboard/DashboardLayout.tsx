@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     BarChart3,
     BookOpen,
@@ -87,6 +87,7 @@ interface TopNavbarProps {
 // Sidebar Component
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobile, isOpen, onClose }) => {
     const pathname = usePathname();
+    const router = useRouter();
 
     const isActive = (item: typeof navItems[0]) => {
         if (item.exact) {
@@ -100,7 +101,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobile, isOp
             {/* Logo and Brand */}
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
                 <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-sky-500 rounded-xl shadow-lg">
+                    <div className="flex items-center justify-center w-10 h-10 bg-sky-500 rounded-xl shadow-lg cursor-pointer"
+                        onClick={() => {
+                            router.push("/");
+                        }}
+                    >
                         <PenTool className="w-6 h-6 text-white" />
                     </div>
                     {(!isCollapsed || isMobile) && (
