@@ -4,12 +4,7 @@ import { CategoryType } from "@/types/blog";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { serializeDocument } from "./date-formatter";
-
-export const isValidUUID = (id: string): boolean =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-
-export const isValidSlug = (slug: string): boolean =>
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+import { isValidUUID } from "./isValid";
 
 const resolvePostId = async (idOrSlug: string): Promise<string | null> => {
     const whereClause = isValidUUID(idOrSlug)

@@ -16,6 +16,12 @@ import {
  * ---- ENUMS ----
  */
 
+export const contactStatusEnum = pgEnum("contact_status", [
+    "new",
+    "in_progress",
+    "resolved"
+]);
+
 // Post lifecycle for admin review + publishing
 export const postStatusEnum = pgEnum("post_status", [
     "draft",        // author/collaborators edit
@@ -446,5 +452,36 @@ export const auditLogs = pgTable(
     (t) => ({
         idxAuditActor: index("idx_audit_actor").on(t.actorUserId),
         idxAuditTarget: index("idx_audit_target").on(t.targetType, t.targetId),
+    })
+);
+
+export const contactQueries = pgTable(
+    "contact_queries",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+
+        // User info
+        name: varchar("name", { length: 128 }).notNull(),
+        email: varchar("email", { length: 256 }).notNull(),
+
+        // Message details
+        subject: varchar("subject", { length: 256 }),
+        category: varchar("category", { length: 128 }),
+        message: text("message").notNull(),
+
+        // Status of the query
+        status: contactStatusEnum("status").default("new").notNull(),
+
+        // Timestamps
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (t) => ({
+        idxContactEmail: index("idx_contact_email").on(t.email),
+        idxContactStatus: index("idx_contact_status").on(t.status),
     })
 );
