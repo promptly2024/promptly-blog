@@ -23,11 +23,17 @@ const getBlogData = async (id: string) => {
             fetchPostWithCategories(id, userId, true),
             fetchAllCategories()
         ]);
-
+        console.log("the post data is ", postData);
         if (!postData) return null;
 
         // Serialize post and categories
-        const serializedPost = serializeDocument(postData) as BlogType;
+        const serializedPost = serializeDocument(postData) as BlogType & {
+            reactionCounts: any;
+            userReactions: any;
+            comments: any[];
+            totalComments: number;
+            totalReactions: number;
+        };
         const serializedCategories = postData.categories.map(serializeDocument) as CategoryType[];
 
         return {
@@ -102,9 +108,26 @@ const BlogPage = async ({ params }: BlogPageProps) => {
         notFound();
     }
 
+    const transformedReactions = {
+        counts: post.reactionCounts || {
+            like: 0,
+            love: 0,
+            clap: 0,
+            insightful: 0,
+            laugh: 0,
+            sad: 0,
+            angry: 0,
+        },
+        userReactions: post.userReactions || {},
+    };
+    const transformedComments = post.comments || [];
+
     return (
         <div className="container mx-auto px-4 py-8">
-            <BlogContent post={post} />
+            <BlogContent post={post} 
+                reactions={transformedReactions}
+                comments={transformedComments}
+            />
         </div>
     );
 };

@@ -133,47 +133,55 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             </p>
           </div>
         ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-sm transition-shadow">
-              <div className="flex items-start gap-4">
-                <img
-                  src={comment.author.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${comment.author.name}`}
-                  alt={comment.author.name}
-                  className="w-10 h-10 rounded-full flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h4 className="font-medium text-slate-900 flex items-center gap-2">
-                        {comment.author.name}
-                        <User className="w-3 h-3 text-slate-400" />
-                      </h4>
-                      <p className="text-sm text-slate-500">
-                        {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
-                        {comment.updatedAt !== comment.createdAt && (
-                          <span className="ml-1 text-slate-400">(edited)</span>
-                        )}
+          comments.map((comment) => {
+            // Extract user data with proper fallbacks
+            const author = comment.author  || {};
+            const authorName = author.name || 'Anonymous User';
+            const authorAvatarUrl = author.avatarUrl;
+            const authorId = author.id;
+
+            return (
+              <div key={comment.id} className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-sm transition-shadow">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={authorAvatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${authorName}`}
+                    alt={authorName}
+                    className="w-10 h-10 rounded-full flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="font-medium text-slate-900 flex items-center gap-2">
+                          {authorName}
+                          <User className="w-3 h-3 text-slate-400" />
+                        </h4>
+                        <p className="text-sm text-slate-500">
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                          {comment.updatedAt !== comment.createdAt && (
+                            <span className="ml-1 text-slate-400">(edited)</span>
+                          )}
+                        </p>
+                      </div>
+                      {isSignedIn && user?.id && authorId === user.id && (
+                        <button
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Delete comment"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="text-slate-700 whitespace-pre-wrap break-words">
+                        {comment.content}
                       </p>
                     </div>
-                    {isSignedIn && user?.id && comment.author.id === user.id && (
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-                        title="Delete comment"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-slate-700 whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

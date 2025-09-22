@@ -1,8 +1,8 @@
-import { categories, media, postCategories, posts, user } from "@/db/schema";
+import { categories, comments, commentReactions, media, postCategories, postReactions, posts, user } from "@/db/schema";
 import { db } from "@/lib/db";
 import { CategoryType } from "@/types/blog";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { serializeDocument } from "./date-formatter";
 import { isValidUUID } from "./isValid";
 
@@ -37,7 +37,6 @@ export const getUserIdFromClerk = async (): Promise<string> => {
     return userId;
 };
 
-
 export const fetchPostWithCategories = async (
     idOrSlug: string,
     userId: string,
@@ -46,8 +45,7 @@ export const fetchPostWithCategories = async (
     const postId = await resolvePostId(idOrSlug);
     if (!postId) throw new Error("Post not found.");
 
-    // isOwner means if true, the blog should belongs to owner.
-    // Fetch post + cover image
+    // Main post query with cover image
     const postResult = await db
         .select({
             id: posts.id,
@@ -60,10 +58,15 @@ export const fetchPostWithCategories = async (
             canonicalUrl: posts.canonicalUrl,
             metaTitle: posts.metaTitle,
             metaDescription: posts.metaDescription,
+            status: posts.status,
+            visibility: posts.visibility,
+            publishedAt: posts.publishedAt,
+            authorId: posts.authorId,
             createdAt: posts.createdAt,
             updatedAt: posts.updatedAt,
+            deletedAt: posts.deletedAt,
 
-            // image info from media
+            // Cover image info from media
             coverImage: {
                 id: media.id,
                 url: media.url,
@@ -74,7 +77,10 @@ export const fetchPostWithCategories = async (
         })
         .from(posts)
         .leftJoin(media, eq(posts.coverImageId, media.id))
-        .where(and(eq(posts.id, postId), isOwner ? eq(posts.authorId, userId) : eq(posts.visibility, 'public')))
+        .where(and(
+            eq(posts.id, postId), 
+            isOwner ? eq(posts.authorId, userId) : eq(posts.status, 'published')
+        ))
         .limit(1)
         .execute();
 
@@ -89,13 +95,171 @@ export const fetchPostWithCategories = async (
             createdAt: categories.createdAt,
         })
         .from(categories)
-        .leftJoin(postCategories, eq(categories.id, postCategories.categoryId))
+        .innerJoin(postCategories, eq(categories.id, postCategories.categoryId))
         .where(eq(postCategories.postId, post.id))
         .execute();
+
+    const reactionCounts = await db
+        .select({
+            type: postReactions.type,
+            count: count(postReactions.id).as('count'),
+        })
+        .from(postReactions)
+        .where(eq(postReactions.postId, post.id))
+        .groupBy(postReactions.type)
+        .execute();
+
+    // Get user's reactions if authenticated
+    let userReactions: { type: string }[] = [];
+    if (userId && !isOwner) {
+        userReactions = await db
+            .select({ type: postReactions.type })
+            .from(postReactions)
+            .where(
+                and(
+                    eq(postReactions.postId, post.id),
+                    eq(postReactions.userId, userId)
+                )
+            )
+            .execute();
+    }
+
+    // Fetch comments with user info
+    const commentsData = await db
+        .select({
+            // Comment fields
+            id: comments.id,
+            content: comments.content,
+            status: comments.status,
+            createdAt: comments.createdAt,
+            updatedAt: comments.updatedAt,
+            
+            // User fields
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            userAvatarUrl: user.avatarUrl,
+        })
+        .from(comments)
+        .innerJoin(user, eq(comments.userId, user.id))
+        .where(and(
+            eq(comments.postId, post.id),
+            eq(comments.status, 'visible')
+        ))
+        .orderBy(comments.createdAt)
+        .execute();
+
+    // Get comment reaction counts for all comments
+    const commentIds = commentsData.map(c => c.id);
+    let commentReactionCounts: { commentId: string; type: string; count: number }[] = [];
+    
+    if (commentIds.length > 0) {
+        // Use inArray instead of sql.raw with ANY
+        const commentReactionsData = await db
+            .select({
+                commentId: commentReactions.commentId,
+                type: commentReactions.type,
+                count: count(commentReactions.id).as('count'),
+            })
+            .from(commentReactions)
+            .where(inArray(commentReactions.commentId, commentIds))
+            .groupBy(commentReactions.commentId, commentReactions.type)
+            .execute();
+        
+        commentReactionCounts = commentReactionsData.map(item => ({
+            commentId: item.commentId,
+            type: item.type,
+            count: Number(item.count)
+        }));
+    }
+
+    // Get user's comment reactions if authenticated
+    let userCommentReactions: { commentId: string; type: string }[] = [];
+    if (userId && !isOwner && commentIds.length > 0) {
+        userCommentReactions = await db
+            .select({
+                commentId: commentReactions.commentId,
+                type: commentReactions.type,
+            })
+            .from(commentReactions)
+            .where(
+                and(
+                    inArray(commentReactions.commentId, commentIds),
+                    eq(commentReactions.userId, userId)
+                )
+            )
+            .execute();
+    }
+
+    // Process reaction counts into the expected format
+    const reactionCountsFormatted = {
+        like: 0,
+        love: 0,
+        clap: 0,
+        insightful: 0,
+        laugh: 0,
+        sad: 0,
+        angry: 0,
+    };
+
+    reactionCounts.forEach((reaction) => {
+        reactionCountsFormatted[reaction.type as keyof typeof reactionCountsFormatted] = Number(reaction.count);
+    });
+
+    // Process user reactions
+    const userReactionsFormatted: Record<string, boolean> = {};
+    userReactions.forEach((reaction) => {
+        userReactionsFormatted[reaction.type] = true;
+    });
+
+    // Process comments with their reactions
+    const processedComments = commentsData.map((comment) => {
+        // Get reaction counts for this comment
+        const commentReactions = commentReactionCounts
+            .filter(cr => cr.commentId === comment.id)
+            .reduce((acc, cr) => {
+                acc[cr.type] = cr.count;
+                return acc;
+            }, {} as Record<string, number>);
+
+        // Get user reactions for this comment
+        const commentUserReactions = userCommentReactions
+            .filter(ucr => ucr.commentId === comment.id)
+            .reduce((acc, ucr) => {
+                acc[ucr.type] = true;
+                return acc;
+            }, {} as Record<string, boolean>);
+
+        return {
+            ...comment,
+            user: {
+                id: comment.userId,
+                name: comment.userName,
+                email: comment.userEmail,
+                avatarUrl: comment.userAvatarUrl,
+            },
+            reactionCounts: {
+                like: 0,
+                love: 0,
+                clap: 0,
+                insightful: 0,
+                laugh: 0,
+                sad: 0,
+                angry: 0,
+                ...commentReactions
+            },
+            userReactions: commentUserReactions,
+        };
+    });
 
     return {
         ...post,
         categories: cats.map(serializeDocument),
+        reactionCounts: reactionCountsFormatted,
+        userReactions: userReactionsFormatted,
+        comments: processedComments.map(serializeDocument),
+        totalComments: processedComments.length,
+        totalReactions: Object.values(reactionCountsFormatted).reduce((sum, count) => sum + count, 0),
     };
 };
 
@@ -125,7 +289,7 @@ export const fetchCategoriesByPostId = async (
             createdAt: categories.createdAt,
         })
         .from(categories)
-        .leftJoin(postCategories, eq(categories.id, postCategories.categoryId))
+        .innerJoin(postCategories, eq(categories.id, postCategories.categoryId))
         .where(eq(postCategories.postId, postId))
         .execute();
 
