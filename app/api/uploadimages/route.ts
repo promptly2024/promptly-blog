@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json({ error: "Image file is required." }, { status: 400 });
     }
-
+    const filename = file.name; 
     // Upload to Cloudinary
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -56,9 +56,9 @@ export async function POST(request: Request) {
     const [newMedia] = await db.insert(media).values({
       createdBy: dbUser.id,
       url: imageUrl,
-      altText: altText || undefined,
+      altText: altText || filename || "User uploaded image",
       type: "image",
-      provider: provider || undefined,
+      provider: provider || "cloudinary",
     }).returning();
 
     return NextResponse.json({ message: "Media saved.", media: newMedia }, { status: 201 });
@@ -164,7 +164,7 @@ export async function DELETE(request: Request) {
       await tx.delete(media).where(eq(media.id, id));
     });
 
-    // Delete from Cloudinary outside transaction (external API can't be rolled back)
+    // Delete from Cloudinary outside transaction because external API can't be rolled back
     if (
       publicId &&
       typeof publicId === "string" &&
