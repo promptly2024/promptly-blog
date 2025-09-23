@@ -160,6 +160,11 @@ interface SidebarProps {
 }
 
 interface TopNavbarProps {
+    loggedInUser: {
+        name: string;
+        email: string;
+        imageUrl: string;
+    };
     currentPageTitle: string;
     currentPageDescription: string;
     onMobileMenuToggle: () => void;
@@ -353,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({ loggedInUser, isAdminRoute, isCollaps
     );
 };
 
-const TopNavbar: React.FC<TopNavbarProps> = ({ currentPageTitle, currentPageDescription, onMobileMenuToggle }) => {
+const TopNavbar: React.FC<TopNavbarProps> = ({ currentPageTitle, currentPageDescription, onMobileMenuToggle, loggedInUser }) => {
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
     return (
@@ -379,11 +384,19 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ currentPageTitle, currentPageDesc
                         className="flex items-center space-x-3 p-2 hover:bg-slate-100 rounded-xl transition-colors"
                     >
                         <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-600 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
+                                {loggedInUser.imageUrl ? (
+                                <img
+                                    src={loggedInUser.imageUrl}
+                                    alt={loggedInUser.name}
+                                    className="w-10 h-10 rounded-full"
+                                />
+                            ) : (
+                                <User className="w-5 h-5 text-white" />
+                            )}
                         </div>
                         <div className="hidden sm:block text-left">
-                            <p className="text-sm font-medium text-slate-800">John Doe</p>
-                            <p className="text-xs text-slate-500">Admin</p>
+                            <p className="text-sm font-medium text-slate-800">{loggedInUser.name}</p>
+                            <p className="text-xs text-slate-500">User</p>
                         </div>
                         <ChevronDown className={cn(
                             "w-4 h-4 text-slate-500 transition-transform",
@@ -445,7 +458,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const [loggedInUser, setLoggedInUser] = useState({
         name: '',
         email: '',
-        imageUrl: ''
+        imageUrl: '',
     });
 
     useEffect(() => {
@@ -533,6 +546,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             )}>
                 {/* Top Navbar */}
                 <TopNavbar
+                    loggedInUser={loggedInUser}
                     currentPageTitle={getCurrentPageTitle()}
                     currentPageDescription={getCurrentPageDescription()}
                     onMobileMenuToggle={toggleMobileSidebar}

@@ -49,7 +49,8 @@ export async function getAnalyticsData(
     );
 
   // For now, we are using placeholder value for view as views are not implemented in database schema 
-  const totalViews = Math.floor(totalBlogsResult.count * 150); // Placeholder calculation
+  // const totalViews = Math.floor(totalBlogsResult.count * 150); // Placeholder calculation
+  const totalViews = 0;
 
   // Monthly Data (last 6 months)
   const monthlyData = await getMonthlyEngagementData(dbUser.id, startDate, endDate);
@@ -105,7 +106,7 @@ async function getMonthlyEngagementData(
 
   return monthlyResults.map((row) => ({
     month: row.month,
-    views: row.posts * 150, // Placeholder until you implement view tracking
+    views: 0, // Placeholder until implement view tracking
     likes: row.likes,
     posts: row.posts,
   }));
@@ -161,7 +162,7 @@ async function getTopPerformingPosts(
     .limit(10);
 
   return topPostsData.map((post) => {
-    const views = 150; // Placeholder until you implement view tracking
+    const views = 0; // Placeholder until you implement view tracking
     const engagementRate = views > 0 ? ((post.likes + post.comments) / views) * 100 : 0;
     
     return {

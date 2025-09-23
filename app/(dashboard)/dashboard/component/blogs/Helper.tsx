@@ -293,6 +293,7 @@ export const EnhancedBlogCard = ({
                                     onDelete={onDelete}
                                     onDuplicate={onDuplicate}
                                     onArchive={onArchive}
+                                    viewMode="list"
                                 />
                             </div>
                         </div>
@@ -384,6 +385,7 @@ export const EnhancedBlogCard = ({
                             onDelete={onDelete}
                             onDuplicate={onDuplicate}
                             onArchive={onArchive}
+                            viewMode="grid"
                         />
                     </div>
                 </div>
@@ -405,12 +407,20 @@ export const VisibilityIcon = ({ visibility }: { visibility: BlogVisibilityType 
     );
 };
 
-export const ActionDropdown = ({ blog, onEdit, onDelete, onDuplicate, onArchive }: {
+export const ActionDropdown = ({ 
+    blog, 
+    onEdit, 
+    onDelete, 
+    onDuplicate, 
+    onArchive,
+    viewMode = 'grid'
+}: {
     blog: UsersBlogType;
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
     onArchive: (id: string) => void;
+    viewMode?: 'grid' | 'list';
 }) => {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -467,8 +477,12 @@ export const ActionDropdown = ({ blog, onEdit, onDelete, onDuplicate, onArchive 
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-20">
+                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                    <div className={`absolute right-0 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 ${
+                        viewMode === 'grid' 
+                            ? 'bottom-full mb-1' // Opens upward in grid mode
+                            : 'top-full mt-1'   // Opens downward in list mode
+                    }`}>
                         {[
                             { icon: Edit, label: 'Edit', action: () => onEdit(blog.id), color: 'text-slate-700' },
                             { icon: ExternalLink, label: 'View', action: () => window.open(`/blog/${blog.slug}`, '_blank'), color: 'text-slate-700' },

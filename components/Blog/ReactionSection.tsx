@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Heart, Smile, Zap, Lightbulb, Laugh, Frown, Angry, Lock } from 'lucide-react';
+import { Heart, Smile, Zap, Lightbulb, Laugh, Frown, Angry, Lock, ThumbsUp } from 'lucide-react';
 import { useUser, SignInButton } from '@clerk/nextjs';
 import { ReactionCounts, ReactionType, UserReactions } from '@/actions/reactionActions';
 import { useReactions } from '@/hooks/useReactions';
@@ -14,7 +14,7 @@ interface ReactionSectionProps {
 }
 
 const reactionConfig = {
-  like: { icon: Heart, label: 'Like', color: 'text-red-500' },
+  like: { icon: ThumbsUp, label: 'Like', color: 'text-red-500' },
   love: { icon: Heart, label: 'Love', color: 'text-pink-500' },
   clap: { icon: Zap, label: 'Clap', color: 'text-yellow-500' },
   insightful: { icon: Lightbulb, label: 'Insightful', color: 'text-blue-500' },

@@ -23,7 +23,7 @@ const AnalyticsKPICards: React.FC<AnalyticsKPICardsProps> = ({
     {
       label: 'Total Blogs',
       value: totalBlogs,
-      change: 0, // You can calculate month-over-month change here
+      change: 0, // month-over-month change here
       trend: 'neutral',
       icon: FileText,
     },
