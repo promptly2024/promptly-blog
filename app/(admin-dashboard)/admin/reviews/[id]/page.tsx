@@ -42,7 +42,6 @@ interface Post {
     metaTitle: string | null;
     metaDescription: string | null;
     status: "draft" | "submitted" | "under_review" | "approved" | "scheduled" | "published" | "rejected" | "archived";
-    visibility: "public" | "unlisted" | "private";
     publishedAt: Date | null;
     scheduledAt: Date | null;
     submittedAt: Date | null;
@@ -244,19 +243,6 @@ const PostReviewDetailPage = ({ params }: { params: Promise<{ id: string }> }) =
         return badges[status] || badges.draft;
     };
 
-    const getVisibilityIcon = (visibility: Post['visibility']) => {
-        switch (visibility) {
-            case 'public':
-                return <Globe className="w-4 h-4 text-green-600" />;
-            case 'unlisted':
-                return <EyeOff className="w-4 h-4 text-yellow-600" />;
-            case 'private':
-                return <Lock className="w-4 h-4 text-red-600" />;
-            default:
-                return <Globe className="w-4 h-4 text-gray-400" />;
-        }
-    };
-
     const canTakeAction = (currentStatus: string) => {
         const allowedActions = {
             under_review: ['approve', 'reject'],
@@ -316,16 +302,6 @@ const PostReviewDetailPage = ({ params }: { params: Promise<{ id: string }> }) =
                         <ArrowLeft className="w-4 h-4" />
                         Back to Posts
                     </button>
-
-                    <div className="flex items-center space-x-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusBadge.color}`}>
-                            {statusBadge.text}
-                        </span>
-                        <div className="flex items-center space-x-1 text-sm text-gray-600">
-                            {getVisibilityIcon(post.visibility)}
-                            <span className="capitalize">{post.visibility}</span>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Error Alert */}

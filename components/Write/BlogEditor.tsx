@@ -138,7 +138,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
         contentMd: post?.contentMd || "",
         coverImageId: post?.coverImageId || "",
         status: post?.status || "draft",
-        visibility: post?.visibility || "public",
         scheduledAt: post?.scheduledAt || "",
         categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : [],
     });
@@ -245,7 +244,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                     contentMd: "",
                     coverImageId: "",
                     status: "draft",
-                    visibility: "public",
                     scheduledAt: "",
                     categoryId: selectedCategoriesIds ? selectedCategoriesIds.map(c => c.id) : [],
                 });
@@ -409,20 +407,6 @@ export default function BlogEditor({ post, categories = [], mode = 'create', sel
                                     <option value="published">Published</option>
                                 </select>
                             </FormField>
-
-                            <FormField label="Visibility" icon={formData.visibility === 'public' ? Globe : Lock}>
-                                <select
-                                    id="visibility"
-                                    name="visibility"
-                                    value={formData.visibility}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
-                                >
-                                    <option value="public">Public</option>
-                                    <option value="private">Private</option>
-                                </select>
-                            </FormField>
-
                             {formData.status === "scheduled" && (
                                 <FormField label="Schedule Date" icon={Calendar} required error={errors.scheduledAt}>
                                     <input

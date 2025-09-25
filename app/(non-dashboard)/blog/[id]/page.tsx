@@ -100,10 +100,6 @@ const BlogPage = async ({ params }: BlogPageProps) => {
         return showError('Blog post not found or you do not have permission to view this post.');
     }
 
-    // if (post.status !== 'published' || post.visibility !== 'public') {
-    //     notFound();
-    // }
-
     if (post.deletedAt) {
         notFound();
     }

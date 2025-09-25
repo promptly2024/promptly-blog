@@ -19,7 +19,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { AnalyticsCard, BulkActions, EnhancedBlogCard, statusConfig, visibilityConfig } from './Helper';
+import { AnalyticsCard, BulkActions, EnhancedBlogCard, statusConfig } from './Helper';
 
 
 // Main Enhanced Component
@@ -156,9 +156,9 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
                 break;
             case 'export':
                 const csvContent = [
-                    'Title,Status,Visibility,Word Count,Reactions,Comments,Created Date',
+                    'Title,Status,Word Count,Reactions,Comments,Created Date',
                     ...blogs.filter(blog => blogIds.includes(blog.id)).map(blog =>
-                        `"${blog.title.replace(/"/g, '""')}",${blog.status},${blog.visibility},${blog.wordCount},${blog.reactionCount},${blog.commentCount},${blog.createdAt ? new Date(blog.createdAt).toISOString() : ""}`
+                        `"${blog.title.replace(/"/g, '""')}",${blog.status},${blog.wordCount},${blog.reactionCount},${blog.commentCount},${blog.createdAt ? new Date(blog.createdAt).toISOString() : ""}`
                     )
                 ].join('\n');
 
@@ -238,7 +238,6 @@ const EnhancedManageBlogs: React.FC<ManageBlogsProps> = ({ blogs }) => {
         setActiveTab('all');
         updateUrlParams('search', '');
         updateUrlParams('status', '');
-        updateUrlParams('visibility', '');
         updateUrlParams('tab', '');
     };
 

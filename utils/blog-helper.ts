@@ -59,7 +59,6 @@ export const fetchPostWithCategories = async (
             metaTitle: posts.metaTitle,
             metaDescription: posts.metaDescription,
             status: posts.status,
-            visibility: posts.visibility,
             publishedAt: posts.publishedAt,
             authorId: posts.authorId,
             createdAt: posts.createdAt,
@@ -78,8 +77,12 @@ export const fetchPostWithCategories = async (
         .from(posts)
         .leftJoin(media, eq(posts.coverImageId, media.id))
         .where(and(
-            eq(posts.id, postId), 
-            isOwner ? eq(posts.authorId, userId) : eq(posts.status, 'published')
+            eq(posts.id, postId),
+            isOwner ? eq(posts.authorId, userId) : and(
+                eq(posts.status, 'approved'),
+                eq(posts.status, 'rejected'),
+                eq(posts.status, "under_review")
+            )
         ))
         .limit(1)
         .execute();
@@ -133,7 +136,7 @@ export const fetchPostWithCategories = async (
             status: comments.status,
             createdAt: comments.createdAt,
             updatedAt: comments.updatedAt,
-            
+
             // User fields
             userId: user.id,
             userName: user.name,
@@ -152,7 +155,7 @@ export const fetchPostWithCategories = async (
     // Get comment reaction counts for all comments
     const commentIds = commentsData.map(c => c.id);
     let commentReactionCounts: { commentId: string; type: string; count: number }[] = [];
-    
+
     if (commentIds.length > 0) {
         // Use inArray instead of sql.raw with ANY
         const commentReactionsData = await db
@@ -165,7 +168,7 @@ export const fetchPostWithCategories = async (
             .where(inArray(commentReactions.commentId, commentIds))
             .groupBy(commentReactions.commentId, commentReactions.type)
             .execute();
-        
+
         commentReactionCounts = commentReactionsData.map(item => ({
             commentId: item.commentId,
             type: item.type,

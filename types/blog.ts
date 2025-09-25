@@ -11,7 +11,6 @@ export interface BlogType {
     metaTitle: string | null;
     metaDescription: string | null;
     status: string;
-    visibility: string;
     publishedAt: string | null;
     scheduledAt: string | null;
     submittedAt: string | null;

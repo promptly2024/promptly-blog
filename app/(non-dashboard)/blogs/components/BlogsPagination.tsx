@@ -19,7 +19,6 @@ interface BlogsPaginationProps {
         page?: string;
         limit?: string;
         status?: string;
-        visibility?: string;
         authorId?: string;
         sortBy?: string;
         sortOrder?: string;

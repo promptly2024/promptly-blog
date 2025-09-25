@@ -2,7 +2,7 @@
 
 "use client";
 import React, { useMemo, useState } from 'react';
-import { UsersBlogType, BlogStatusType, BlogVisibilityType } from '@/actions/fetchAllPostByUser';
+import { UsersBlogType, BlogStatusType } from '@/actions/fetchAllPostByUser';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -38,13 +38,6 @@ export const statusConfig = {
         description: 'Work in progress',
         priority: 1
     },
-    submitted: {
-        icon: Upload,
-        color: 'bg-blue-100 text-blue-800 border-blue-200',
-        text: 'Submitted',
-        description: 'Waiting for review',
-        priority: 2
-    },
     under_review: {
         icon: Clock,
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -66,13 +59,6 @@ export const statusConfig = {
         description: 'Scheduled for later',
         priority: 5
     },
-    published: {
-        icon: Globe,
-        color: 'bg-green-100 text-green-800 border-green-200',
-        text: 'Published',
-        description: 'Live on the site',
-        priority: 6
-    },
     rejected: {
         icon: XCircle,
         color: 'bg-red-100 text-red-800 border-red-200',
@@ -87,12 +73,6 @@ export const statusConfig = {
         description: 'No longer active',
         priority: 8
     }
-};
-
-export const visibilityConfig = {
-    public: { icon: Globe, color: 'text-green-600', text: 'Public' },
-    unlisted: { icon: Link, color: 'text-orange-600', text: 'Unlisted' },
-    private: { icon: Lock, color: 'text-red-600', text: 'Private' }
 };
 
 export const AnalyticsCard = ({ blogs }: { blogs: UsersBlogType[] }) => {
@@ -276,7 +256,6 @@ export const EnhancedBlogCard = ({
                                 )}
                                 <div className="flex items-center gap-3 flex-wrap">
                                     <StatusBadge status={blog.status} blog={blog} />
-                                    <VisibilityIcon visibility={blog.visibility} />
                                     <span className="text-xs text-slate-500">
                                         Updated {formatDate(blog.updatedAt)}
                                     </span>
@@ -334,7 +313,6 @@ export const EnhancedBlogCard = ({
 
                 <div className="flex items-center gap-2 mb-4">
                     <StatusBadge status={blog.status} blog={blog} />
-                    <VisibilityIcon visibility={blog.visibility} />
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap mb-4">
@@ -390,19 +368,6 @@ export const EnhancedBlogCard = ({
                     </div>
                 </div>
             </div>
-        </div>
-    );
-};
-
-
-export const VisibilityIcon = ({ visibility }: { visibility: BlogVisibilityType }) => {
-    const config = visibilityConfig[visibility];
-    const IconComponent = config.icon;
-
-    return (
-        <div className="flex items-center gap-1" title={config.text}>
-            <IconComponent className={`w-4 h-4 ${config.color}`} />
-            <span className="hidden md:inline text-sm text-slate-600">{config.text}</span>
         </div>
     );
 };

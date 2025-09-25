@@ -20,7 +20,6 @@ interface BlogsPageProps {
         page?: string;
         limit?: string;
         status?: string;
-        visibility?: string;
         authorId?: string;
         sortBy?: string;
         sortOrder?: string;
@@ -41,7 +40,6 @@ interface BlogPost {
     metaTitle: string | null;
     metaDescription: string | null;
     status: string;
-    visibility: string;
     publishedAt: string | null;
     scheduledAt: string | null;
     wordCount: number | null;
@@ -63,7 +61,6 @@ interface BlogsResponse {
     };
     filters: {
         status?: string;
-        visibility?: string;
         authorId?: string;
         sortBy: string;
         sortOrder: string;
@@ -77,10 +74,7 @@ async function fetchBlogs(searchParams: BlogsPageProps['searchParams']): Promise
     const params = new URLSearchParams();
     if (searchParams.page) params.set('page', searchParams.page);
     if (searchParams.limit) params.set('limit', searchParams.limit);
-    // Always force status=published
-    params.set('status', 'published');
-    // if (searchParams.status) params.set('status', searchParams.status);
-    // if (searchParams.visibility) params.set('visibility', searchParams.visibility);
+    params.set('status', 'approved');
     if (searchParams.authorId) params.set('authorId', searchParams.authorId);
     if (searchParams.sortBy) params.set('sortBy', searchParams.sortBy);
     if (searchParams.sortOrder) params.set('sortOrder', searchParams.sortOrder);
@@ -187,9 +181,6 @@ export default async function BlogsPage(props: BlogsPageProps) {
                                 </>
                             )}
                         </div>
-
-                        {/* Quick stats */}
-                        {/* Status/visibility chips removed */}
                     </div>
 
                     {/* Blog Posts */}

@@ -28,8 +28,7 @@ interface Post {
   title: string;
   excerpt: string | null;
   coverImage: string | null;
-  status: "draft" | "submitted" | "under_review" | "approved" | "scheduled" | "published" | "rejected" | "archived";
-  visibility: "public" | "unlisted" | "private";
+  status: "draft" | "under_review" | "approved" | "scheduled" | "rejected" | "archived";
   submittedAt: Date | null;
   scheduledAt: Date | null;
   publishedAt: Date | null;
@@ -103,38 +102,22 @@ const BlogManagementPage = () => {
   const getStatusBadge = (status: Post['status']) => {
     const badges = {
       draft: { color: 'bg-gray-100 text-gray-800', text: 'Draft' },
-      submitted: { color: 'bg-blue-100 text-blue-800', text: 'Submitted' },
       under_review: { color: 'bg-yellow-100 text-yellow-800', text: 'Under Review' },
       approved: { color: 'bg-green-100 text-green-800', text: 'Approved' },
       scheduled: { color: 'bg-purple-100 text-purple-800', text: 'Scheduled' },
-      published: { color: 'bg-emerald-100 text-emerald-800', text: 'Published' },
       rejected: { color: 'bg-red-100 text-red-800', text: 'Rejected' },
       archived: { color: 'bg-gray-100 text-gray-600', text: 'Archived' }
     };
     return badges[status] || badges.draft;
   };
 
-  // Get visibility icon
-  const getVisibilityIcon = (visibility: Post['visibility']) => {
-    switch (visibility) {
-      case 'public':
-        return <Globe className="w-4 h-4 text-green-600" />;
-      case 'unlisted':
-        return <EyeOff className="w-4 h-4 text-yellow-600" />;
-      case 'private':
-        return <Lock className="w-4 h-4 text-red-600" />;
-      default:
-        return <Globe className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
   // Calculate stats
   const stats = {
     total: pagination.total,
-    submitted: posts.filter(p => p.status === 'submitted').length,
     underReview: posts.filter(p => p.status === 'under_review').length,
     approved: posts.filter(p => p.status === 'approved').length,
-    published: posts.filter(p => p.status === 'published').length
+    scheduled: posts.filter(p => p.status === 'scheduled').length,
+    rejected: posts.filter(p => p.status === 'rejected').length,
   };
 
   // Get unique authors for filter
@@ -177,8 +160,8 @@ const BlogManagementPage = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Submitted</p>
-                <p className="text-2xl font-semibold text-blue-600 mt-1">{stats.submitted}</p>
+                <p className="text-sm font-medium text-gray-600">Scheduled</p>
+                <p className="text-2xl font-semibold text-blue-600 mt-1">{stats.scheduled}</p>
               </div>
               <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
                 <Clock className="w-6 h-6" />
@@ -213,8 +196,8 @@ const BlogManagementPage = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Published</p>
-                <p className="text-2xl font-semibold text-emerald-600 mt-1">{stats.published}</p>
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-2xl font-semibold text-emerald-600 mt-1">{stats.rejected}</p>
               </div>
               <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
                 <CheckCircle className="w-6 h-6" />
@@ -387,12 +370,6 @@ const BlogManagementPage = () => {
                                     {post.excerpt}
                                   </p>
                                 )}
-                                <div className="flex items-center mt-1 space-x-2">
-                                  {getVisibilityIcon(post.visibility)}
-                                  <span className="text-xs text-gray-500 capitalize">
-                                    {post.visibility}
-                                  </span>
-                                </div>
                               </div>
                             </div>
                           </td>

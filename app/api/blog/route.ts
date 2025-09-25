@@ -16,7 +16,6 @@ export interface CreatePostRequest {
   metaTitle?: string;
   metaDescription?: string;
   status?: 'draft' | 'published' | 'scheduled';
-  visibility?: 'public' | 'private';
   scheduledAt?: string;
 }
 
@@ -24,7 +23,6 @@ interface PostsQueryParams {
   page?: string;
   limit?: string;
   status?: string;
-  visibility?: string;
   authorId?: string;
   sortBy?: 'createdAt' | 'publishedAt' | 'updatedAt' | 'title';
   sortOrder?: 'asc' | 'desc';
@@ -125,7 +123,6 @@ export async function POST(request: NextRequest) {
       coverImageId,
       slug: providedSlug,
       status = 'draft',
-      visibility = 'public',
       scheduledAt,
       metaTitle: userMetaTitle,
       metaDescription: userMetaDescription,
@@ -209,13 +206,11 @@ export async function POST(request: NextRequest) {
       canonicalUrl,
       metaTitle,
       metaDescription,
-      status,
-      visibility,
+      status: status === 'published' ? 'under_review' : status,
       wordCount,
       readingTimeMins: readingTime,
       publishedAt,
       scheduledAt: status === 'scheduled' && scheduledAt ? new Date(scheduledAt) : null,
-      approvedAt: status === 'published' ? now : null,
       createdAt: now,
       updatedAt: now,
     }).returning();
@@ -230,7 +225,6 @@ export async function POST(request: NextRequest) {
         title: createdPost.title,
         slug: createdPost.slug,
         status: createdPost.status,
-        visibility: createdPost.visibility,
         authorId: createdPost.authorId,
         excerpt: createdPost.excerpt,
         coverImageId: createdPost.coverImageId,
@@ -268,7 +262,6 @@ export async function GET(request: NextRequest) {
       page: searchParams.get('page') || '1',
       limit: searchParams.get('limit') || '10',
       status: searchParams.get('status') || undefined,
-      visibility: searchParams.get('visibility') || undefined,
       authorId: searchParams.get('authorId') || undefined,
       sortBy: (searchParams.get('sortBy') as any) || 'createdAt',
       sortOrder: (searchParams.get('sortOrder') as any) || 'desc',
@@ -287,10 +280,6 @@ export async function GET(request: NextRequest) {
 
     if (params.status) {
       conditions.push(eq(posts.status, params.status as any));
-    }
-
-    if (params.visibility) {
-      conditions.push(eq(posts.visibility, params.visibility as any));
     }
 
     if (params.authorId) {
@@ -314,7 +303,6 @@ export async function GET(request: NextRequest) {
       metaTitle: posts.metaTitle,
       metaDescription: posts.metaDescription,
       status: posts.status,
-      visibility: posts.visibility,
       publishedAt: posts.publishedAt,
       scheduledAt: posts.scheduledAt,
       wordCount: posts.wordCount,
@@ -351,7 +339,6 @@ export async function GET(request: NextRequest) {
       },
       filters: {
         status: params.status,
-        visibility: params.visibility,
         authorId: params.authorId,
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,

@@ -153,9 +153,8 @@ export interface UsersBlogType {
     metaTitle: string | null;    // <-- changed from string to string | null
     metaDescription: string | null; // <-- changed from string to string | null
 
-    // Status & visibility
+    // Status
     status: BlogStatusType;
-    visibility: BlogVisibilityType;
 
     // Dates
     createdAt: string | null;    // <-- changed from string to string | null
@@ -177,5 +176,4 @@ export interface UsersBlogType {
     reactionCount: number;
 }
 
-export type BlogStatusType = "draft" | "submitted" | "under_review" | "approved" | "scheduled" | "published" | "rejected" | "archived";
-export type BlogVisibilityType = "public" | "unlisted" | "private";
+export type BlogStatusType = "draft" | "under_review" | "approved" | "scheduled" | "rejected" | "archived";

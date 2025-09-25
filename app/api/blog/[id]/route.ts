@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest) {
         if (!postId) {
             return NextResponse.json({ error: "Post ID is required." }, { status: 400 });
         }
-        const { title, contentMd, coverImageId, status, visibility, scheduledAt, categoryId } = await request.json();
+        const { title, contentMd, coverImageId, status, scheduledAt, categoryId } = await request.json();
         if (!title || !contentMd) {
             return NextResponse.json({ error: "Title and content are required." }, { status: 400 });
         }
@@ -96,7 +96,6 @@ export async function PUT(request: NextRequest) {
                 contentMd,
                 coverImageId,
                 status,
-                visibility,
                 scheduledAt,
                 updatedAt: new Date()
             })
