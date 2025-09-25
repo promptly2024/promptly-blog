@@ -29,7 +29,7 @@ export async function syncUser() {
         name: `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`,
         email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
         avatarUrl: clerkUser.imageUrl ?? null,
-        siteRole: adminEmail.includes(clerkUser.emailAddresses[0]?.emailAddress ?? "") ? "admin" : "user",
+        // siteRole: adminEmail.includes(clerkUser.emailAddresses[0]?.emailAddress ?? "") ? "admin" : "user",
         bio: typeof clerkUser.publicMetadata.bio === "string" ? clerkUser.publicMetadata.bio : null,
       })
       .where(eq(user.clerkId, clerkUser.id));
