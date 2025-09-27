@@ -1,3 +1,6 @@
+// To DO: Add pagination for large number of categories/tags
+// To DO: Add bulk delete functionality, select multiple categories/tags and delete, already have UI for it
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -801,7 +804,7 @@ const TaxonomyAdminPage = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
-                  // Bulk delete logic would go here
+                  toast('Feature coming soon!');
                   console.log('Bulk delete:', selectedItems);
                   setSelectedItems([]);
                 }}
