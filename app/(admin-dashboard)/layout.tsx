@@ -16,10 +16,6 @@ export default async function RootLayout({
     }
 
     return (
-        <html lang="en">
-            <body>
-                <DashboardLayout>{children}</DashboardLayout>
-            </body>
-        </html>
+        <DashboardLayout>{children}</DashboardLayout>
     );
 }
