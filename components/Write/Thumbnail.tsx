@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Image,
     AlertCircle,
@@ -17,7 +19,14 @@ import {
     Camera,
     Globe,
     Eye,
-    Download
+    Download,
+    Sparkles,
+    Wand2,
+    RefreshCw,
+    Stars,
+    Palette,
+    Zap,
+    WandSparkles,
 } from "lucide-react";
 import { fetchUnsplashImages } from '@/utils/getUnsplashImages';
 import { toast } from 'sonner';
@@ -43,6 +52,9 @@ interface UnsplashImage {
 interface ThumbnailSectionProps {
     thumbnailId: string | null;
     setThumbnailId?: (id: string | null) => void;
+    // Add these props for AI generation context
+    title?: string;
+    contentMD?: string;
 }
 
 interface DBResponse {
@@ -55,10 +67,23 @@ interface DBResponse {
     createdBy: string | null;
 }
 
+interface GenerateImageOptions {
+    title?: string;
+    contentMD?: string;
+    type?: 'blog-cover' | 'social';
+    platform?: 'twitter' | 'linkedin' | 'instagram';
+    customPrompt?: string;
+    aspectRatio?: '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
+    style?: string;
+}
+
 const ThumbnailSection = ({
     thumbnailId,
-    setThumbnailId
+    setThumbnailId,
+    title = "",
+    contentMD = ""
 }: ThumbnailSectionProps) => {
+    // Existing state
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [query, setQuery] = useState<string>("");
@@ -70,9 +95,48 @@ const ThumbnailSection = ({
     const [selectedImage, setSelectedImage] = useState<UnsplashImage | null>(null);
     const [page, setPage] = useState(1);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'url' | 'search' | 'upload'>('url');
     const [previewLoading, setPreviewLoading] = useState(false);
 
+    // Enhanced state with AI generation tab
+    const [activeTab, setActiveTab] = useState<'url' | 'search' | 'upload' | 'generate'>('url');
+    
+    // AI Generation state
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generateType, setGenerateType] = useState<'blog-cover' | 'social'>('blog-cover');
+    const [socialPlatform, setSocialPlatform] = useState<'twitter' | 'linkedin' | 'instagram'>('twitter');
+    const [customPrompt, setCustomPrompt] = useState('');
+    const [aspectRatio, setAspectRatio] = useState<'1:1' | '3:4' | '4:3' | '9:16' | '16:9'>('16:9');
+    const [imageStyle, setImageStyle] = useState('modern-professional');
+    const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+    const [usedPrompt, setUsedPrompt] = useState<string>('');
+    const [generationHistory, setGenerationHistory] = useState<Array<{
+        prompt: string;
+        imageUrl: string;
+        timestamp: Date;
+        style: string;
+    }>>([]);
+
+    // Predefined styles for better results
+    const imageStyles = [
+        { value: 'modern-professional', label: 'Modern Professional', description: 'Clean, minimalist business style' },
+        { value: 'vibrant-colorful', label: 'Vibrant & Colorful', description: 'Bold colors and dynamic composition' },
+        { value: 'abstract-artistic', label: 'Abstract Artistic', description: 'Creative and artistic interpretation' },
+        { value: 'photography-realistic', label: 'Photography Style', description: 'Realistic photographic look' },
+        { value: 'illustration-flat', label: 'Flat Illustration', description: 'Modern flat design illustration' },
+        { value: 'gradient-modern', label: 'Gradient Modern', description: 'Contemporary gradient backgrounds' },
+        { value: 'tech-futuristic', label: 'Tech Futuristic', description: 'Technology and innovation focused' },
+        { value: 'nature-organic', label: 'Nature & Organic', description: 'Natural elements and textures' }
+    ];
+
+    // Tab configuration
+    const tabs = [
+        { id: 'url', label: 'URL', icon: Link, description: 'Paste image URL' },
+        { id: 'search', label: 'Search', icon: Search, description: 'Find on Unsplash' },
+        { id: 'upload', label: 'Upload', icon: Upload, description: 'Upload from device' },
+        { id: 'generate', label: 'AI Generate', icon: Sparkles, description: 'Create with AI' }
+    ];
+
+    // Existing functions (unchanged)
     const validateImageUrl = (url: string) => {
         setPreviewLoading(true);
         setError(null);
@@ -177,7 +241,6 @@ const ThumbnailSection = ({
         await uploadImage(image.urls.regular, image.alt_description || image.description || `Photo by ${image.user.name}`, 'unsplash');
     };
 
-
     const uploadImage = async (url: string, alt: string, provider: string) => {
         try {
             setIsLoading(true);
@@ -269,6 +332,94 @@ const ThumbnailSection = ({
         }
     };
 
+    // NEW: AI Generation Functions
+    const handleGenerateImage = async () => {
+        if (!title && !customPrompt.trim()) {
+            toast.error('Content Required', {
+                description: 'Please provide a blog title or custom prompt to generate images.'
+            });
+            return;
+        }
+
+        setIsGenerating(true);
+        setError(null);
+
+        const options: GenerateImageOptions = {
+            title: title || 'Blog Post',
+            contentMD,
+            type: generateType,
+            platform: generateType === 'social' ? socialPlatform : undefined,
+            customPrompt: customPrompt.trim() || undefined,
+            aspectRatio: aspectRatio,
+            style: imageStyle
+        };
+
+        try {
+            const response = await fetch('/api/ai/generate-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(options),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate image');
+            }
+
+            const data = await response.json();
+            const media: DBResponse = data.media;
+
+            // Update state with generated image
+            setThumbnail(media.url);
+            setGeneratedImages(prev => [media.url, ...prev.slice(0, 4)]); // Keep last 5
+            setUsedPrompt(data.prompt);
+            
+            // Add to generation history
+            setGenerationHistory(prev => [{
+                prompt: data.prompt,
+                imageUrl: media.url,
+                timestamp: new Date(),
+                style: imageStyle
+            }, ...prev.slice(0, 9)]); // Keep last 10
+
+            if (setThumbnailId) {
+                setThumbnailId(media.id);
+            }
+
+            toast.success('🎨 Image Generated Successfully!', {
+                description: `Created using Imagen 4 Fast with ${imageStyle.replace('-', ' ')} style.`
+            });
+
+        } catch (error: any) {
+            setError(error.message);
+            toast.error('Generation Failed', {
+                description: error.message
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleRegenerateWithSamePrompt = async () => {
+        if (!usedPrompt) return;
+        
+        setCustomPrompt(usedPrompt);
+        await handleGenerateImage();
+    };
+
+    const handleUseGeneratedImage = async (imageUrl: string, historyItem?: any) => {
+        setThumbnail(imageUrl);
+        
+        // Upload the generated image to get a media ID
+        await uploadImage(
+            imageUrl, 
+            historyItem ? `AI Generated: ${historyItem.prompt.slice(0, 50)}...` : 'AI Generated Image', 
+            'imagen4'
+        );
+    };
+
     return (
         <>
             <Card className="w-full border-sky-200 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -289,38 +440,27 @@ const ThumbnailSection = ({
                 </CardHeader>
 
                 <CardContent className="p-6 space-y-6">
-                    {/* Tab Selection */}
-                    <div className="flex space-x-1 bg-sky-50 p-1 rounded-lg">
-                        <button
-                            onClick={() => setActiveTab('url')}
-                            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'url'
-                                ? 'bg-white text-sky-700 shadow-sm'
-                                : 'text-sky-600 hover:text-sky-700'
-                                }`}
-                        >
-                            <Link className="w-4 h-4" />
-                            <span>URL</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('search')}
-                            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'search'
-                                ? 'bg-white text-sky-700 shadow-sm'
-                                : 'text-sky-600 hover:text-sky-700'
-                                }`}
-                        >
-                            <Search className="w-4 h-4" />
-                            <span>Search</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('upload')}
-                            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'upload'
-                                ? 'bg-white text-sky-700 shadow-sm'
-                                : 'text-sky-600 hover:text-sky-700'
-                                }`}
-                        >
-                            <Upload className="w-4 h-4" />
-                            <span>Upload</span>
-                        </button>
+                    {/* Enhanced Tab Selection */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 bg-sky-50 p-2 rounded-lg">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <button
+                                    type="button"
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`flex flex-col items-center justify-center space-y-1 py-3 px-2 rounded-md text-sm font-medium transition-all ${
+                                        activeTab === tab.id
+                                            ? 'bg-white text-sky-700 shadow-sm'
+                                            : 'text-sky-600 hover:text-sky-700 hover:bg-sky-100'
+                                    }`}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    <span className="text-xs font-medium">{tab.label}</span>
+                                    {tab.id === 'generate' }
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* URL Tab */}
@@ -345,7 +485,7 @@ const ThumbnailSection = ({
                         </div>
                     )}
 
-                    {/* Search Tab */}
+                    {/* Search Tab - Same as before */}
                     {activeTab === 'search' && (
                         <div className="space-y-4">
                             <div>
@@ -363,6 +503,7 @@ const ThumbnailSection = ({
                                     <Button
                                         onClick={handleImageSearch}
                                         disabled={isLoading}
+                                        type="button"
                                         className="bg-sky-500 hover:bg-sky-600 shrink-0"
                                     >
                                         {isLoading ? (
@@ -377,7 +518,6 @@ const ThumbnailSection = ({
                                 </p>
                             </div>
 
-                            {/* Quick Search Results Preview */}
                             {images.length > 0 && (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
@@ -387,6 +527,7 @@ const ThumbnailSection = ({
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            type="button"
                                             onClick={() => setIsModalOpen(true)}
                                             className="text-sky-600 border-sky-200 hover:bg-sky-50"
                                         >
@@ -417,11 +558,12 @@ const ThumbnailSection = ({
                         </div>
                     )}
 
-                    {/* Upload Tab */}
+                    {/* Upload Tab - Same as before */}
                     {activeTab === 'upload' && (
                         <div className="space-y-4">
                             <Button
                                 onClick={() => setIsUploadModalOpen(true)}
+                                type="button"
                                 variant="outline"
                                 className="w-full h-24 border-2 border-dashed border-sky-200 hover:border-sky-400 hover:bg-sky-50 transition-all"
                             >
@@ -434,6 +576,212 @@ const ThumbnailSection = ({
                         </div>
                     )}
 
+                    {/* NEW: AI Generation Tab */}
+                    {activeTab === 'generate' && (
+                        <div className="space-y-6">
+                            {/* Generation Type Selection */}
+                            <div className="space-y-3">
+                                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <WandSparkles className="w-4 h-4 text-purple-500" />
+                                    Content Type
+                                </Label>
+                                <Select value={generateType} onValueChange={(value: 'blog-cover' | 'social') => {
+                                    setGenerateType(value);
+                                    // Auto-adjust aspect ratio based on type
+                                    if (value === 'social' && socialPlatform === 'instagram') {
+                                        setAspectRatio('1:1');
+                                    } else {
+                                        setAspectRatio('16:9');
+                                    }
+                                }}>
+                                    <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="blog-cover">
+                                            <div className="flex items-center gap-2">
+                                                <Image className="w-4 h-4" />
+                                                Blog Cover Image
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="social">
+                                            <div className="flex items-center gap-2">
+                                                <Globe className="w-4 h-4" />
+                                                Social Media Image
+                                            </div>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Social Platform Selection */}
+                            {generateType === 'social' && (
+                                <div className="space-y-3">
+                                    <Label className="text-sm font-medium text-gray-700">
+                                        Social Platform
+                                    </Label>
+                                    <Select value={socialPlatform} onValueChange={(value: 'twitter' | 'linkedin' | 'instagram') => {
+                                        setSocialPlatform(value);
+                                        setAspectRatio(value === 'instagram' ? '1:1' : '16:9');
+                                    }}>
+                                        <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="twitter">Twitter/X (16:9)</SelectItem>
+                                            <SelectItem value="linkedin">LinkedIn (16:9)</SelectItem>
+                                            <SelectItem value="instagram">Instagram (1:1)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            {/* Style Selection */}
+                            <div className="space-y-3">
+                                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <Palette className="w-4 h-4 text-purple-500" />
+                                    Visual Style
+                                </Label>
+                                <Select value={imageStyle} onValueChange={setImageStyle}>
+                                    <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-60">
+                                        {imageStyles.map((style) => (
+                                            <SelectItem key={style.value} value={style.value}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{style.label}</span>
+                                                    <span className="text-xs text-gray-500">{style.description}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Aspect Ratio Selection */}
+                            <div className="space-y-3">
+                                <Label className="text-sm font-medium text-gray-700">
+                                    Aspect Ratio
+                                </Label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {['1:1', '3:4', '4:3', '9:16', '16:9'].map((ratio) => (
+                                        <button
+                                            type="button"
+                                            key={ratio}
+                                            onClick={() => setAspectRatio(ratio as any)}
+                                            className={`p-2 text-xs font-medium rounded border-2 transition-all ${
+                                                aspectRatio === ratio
+                                                    ? 'border-purple-400 bg-purple-50 text-purple-700'
+                                                    : 'border-gray-200 hover:border-purple-200'
+                                            }`}
+                                        >
+                                            {ratio}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Custom Prompt */}
+                            <div className="space-y-3">
+                                <Label className="text-sm font-medium text-gray-700">
+                                    Custom Prompt (Optional)
+                                </Label>
+                                <Textarea
+                                    placeholder={`Describe the image you want... or leave empty to auto-generate from "${title || 'your blog content'}"`}
+                                    value={customPrompt}
+                                    onChange={(e) => setCustomPrompt(e.target.value)}
+                                    className="border-purple-200 focus:border-purple-400 focus:ring-purple-400 min-h-[80px]"
+                                    rows={3}
+                                />
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <Stars className="w-3 h-3" />
+                                    <span>
+                                        AI will enhance your prompt with the selected style and format
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    onClick={handleGenerateImage}
+                                    disabled={isGenerating || (!title && !customPrompt.trim())}
+                                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Generating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            Generate with AI
+                                        </>
+                                    )}
+                                </Button>
+                                
+                                {usedPrompt && !isGenerating && (
+                                    <Button
+                                        onClick={handleRegenerateWithSamePrompt}
+                                        variant="outline"
+                                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                    >
+                                        <RefreshCw className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Generation Info */}
+                            {usedPrompt && (
+                                <div className="p-4 bg-purple-50 rounded-lg space-y-2">
+                                    <Label className="text-xs font-medium text-purple-700">
+                                        Generated Prompt:
+                                    </Label>
+                                    <p className="text-xs text-purple-600 leading-relaxed">
+                                        {usedPrompt}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-purple-500">
+                                        <Zap className="w-3 h-3" />
+                                        <span>Powered by Imagen 4 Fast • {aspectRatio} • {imageStyle.replace('-', ' ')}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Generation History */}
+                            {generationHistory.length > 0 && (
+                                <div className="space-y-3">
+                                    <Label className="text-sm font-medium text-gray-700">
+                                        Recent Generations
+                                    </Label>
+                                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                                        {generationHistory.slice(0, 4).map((item, index) => (
+                                            <div
+                                                key={index}
+                                                className="relative aspect-video rounded-md overflow-hidden cursor-pointer group border-2 border-transparent hover:border-purple-400 transition-all"
+                                                onClick={() => handleUseGeneratedImage(item.imageUrl, item)}
+                                            >
+                                                <img
+                                                    src={item.imageUrl}
+                                                    alt={`Generated ${index + 1}`}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center">
+                                                    <Check className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                                <div className="absolute bottom-1 left-1 bg-purple-600 text-white px-1 py-0.5 rounded text-xs">
+                                                    {item.style.split('-')[0]}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Error Display */}
                     {error && (
                         <Alert variant="destructive" className="border-red-200">
@@ -443,12 +791,13 @@ const ThumbnailSection = ({
                     )}
 
                     {/* Loading State */}
-                    {(previewLoading || isLoading) && (
+                    {(previewLoading || isLoading || isGenerating) && (
                         <div className="flex items-center justify-center py-8">
                             <div className="flex items-center space-x-2">
                                 <Loader2 className="h-5 w-5 animate-spin text-sky-500" />
                                 <span className="text-sky-600">
-                                    {previewLoading ? 'Loading preview...' : 'Processing...'}
+                                    {previewLoading ? 'Loading preview...' : 
+                                     isGenerating ? 'Creating your image...' : 'Processing...'}
                                 </span>
                             </div>
                         </div>
@@ -513,6 +862,7 @@ const ThumbnailSection = ({
                 </CardContent>
             </Card>
 
+            {/* Rest of the modals remain the same */}
             {/* Unsplash Images Modal */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
@@ -528,7 +878,7 @@ const ThumbnailSection = ({
                             {images.map((img) => (
                                 <div
                                     key={img.id}
-                                    className="aspect-video relative rounded-lg overflow-hidden cursor-pointer group border-2 border-transparent hover:border-sky-400 transition-all duration-200 shadow-md hover:shadow-lg"
+                                    className="aspect-video relative rounded-lg overflow-hidden cursor-pointer group border-2 border-transparent hover:border-sky-400 transition-all duration-200"
                                     onClick={() => handleImageSelect(img)}
                                 >
                                     <img
@@ -648,5 +998,8 @@ const ThumbnailSection = ({
         </>
     );
 };
+
+// ThumbnailSection only uploads/selects/removes images and updates the thumbnailId.
+// It does NOT trigger blog creation. Blog creation only happens when the user submits the post form.
 
 export default ThumbnailSection;

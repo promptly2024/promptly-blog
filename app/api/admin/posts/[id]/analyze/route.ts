@@ -11,8 +11,6 @@ export async function POST(
   try {
     const { id: postId } = await params;
     
-    // First, let's use a simpler approach and build the query manually
-    // This avoids the TypeScript relation issues
     const postWithRelations = await db
       .select({
         // Post fields
@@ -96,7 +94,6 @@ export async function POST(
     const metaTitleLength = postData.metaTitle?.length || 0;
     const metaDescLength = postData.metaDescription?.length || 0;
 
-    // Create comprehensive PRE-PUBLICATION analysis prompt
     const analysisPrompt = `
 You are conducting a PRE-PUBLICATION content analysis for a blog post that is currently in "${postData.status}" status and awaiting admin approval. This analysis will help the admin decide whether to approve, reject, or request revisions.
 

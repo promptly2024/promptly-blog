@@ -20,7 +20,8 @@ import {
     History,
     X,
     Sparkles, 
-    Brain
+    Brain,
+    Trash
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
@@ -679,93 +680,148 @@ const PostReviewDetailPage = ({ params }: { params: Promise<{ id: string }> }) =
 
                 {/* Action Modals */}
                 {showActionModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-lg max-w-md w-full p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-medium text-gray-900">
-                                    Confirm {showActionModal.charAt(0).toUpperCase() + showActionModal.slice(1)}
-                                </h3>
-                                <button
-                                    onClick={() => setShowActionModal(null)}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <p className="text-sm text-gray-700">
-                                    Are you sure you want to {showActionModal} this post?
-                                </p>
-
-                                {showActionModal === 'schedule' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                            <input
-                                                type="date"
-                                                value={scheduledDate}
-                                                onChange={(e) => setScheduledDate(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
+                    <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200/50">
+                            {/* Header with gradient */}
+                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-200/60 p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+                                            {showActionModal === 'publish' && <CheckCircle className="w-5 h-5 text-white" />}
+                                            {showActionModal === 'schedule' && <Calendar className="w-5 h-5 text-white" />}
+                                            {showActionModal === 'reject' && <X className="w-5 h-5 text-white" />}
+                                            {showActionModal === 'archive' && <Archive className="w-5 h-5 text-white" />}
+                                            {showActionModal === 'delete' && <Trash className="w-5 h-5 text-white" />}
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                                            <input
-                                                type="time"
-                                                value={scheduledTime}
-                                                onChange={(e) => setScheduledTime(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
+                                            <h3 className="text-xl font-semibold text-gray-900">
+                                                Confirm {showActionModal.charAt(0).toUpperCase() + showActionModal.slice(1)}
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mt-0.5">
+                                                {showActionModal === 'publish' && 'Make this post live'}
+                                                {showActionModal === 'schedule' && 'Set publication date'}
+                                                {showActionModal === 'reject' && 'Decline this submission'}
+                                                {showActionModal === 'archive' && 'Move to archive'}
+                                                {showActionModal === 'delete' && 'Permanently remove'}
+                                            </p>
                                         </div>
                                     </div>
-                                )}
-
-                                {(showActionModal === 'reject' || showActionModal === 'archive') && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Reason {showActionModal === 'reject' ? '(required)' : '(optional)'}
-                                        </label>
-                                        <textarea
-                                            value={actionReason}
-                                            onChange={(e) => setActionReason(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            rows={3}
-                                            placeholder={`Enter reason for ${showActionModal}...`}
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end space-x-3">
                                     <button
                                         onClick={() => setShowActionModal(null)}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                     >
-                                        Cancel
+                                        <X className="w-5 h-5" />
                                     </button>
-                                    <button
-                                        onClick={() => handleAction(showActionModal)}
-                                        disabled={
-                                            actionLoading ||
-                                            (showActionModal === 'reject' && !actionReason.trim()) ||
-                                            (showActionModal === 'schedule' && (!scheduledDate || !scheduledTime))
-                                        }
-                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {actionLoading ? (
-                                            <div className="flex items-center">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                Processing...
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6">
+                                <div className="space-y-4">
+                                    <p className="text-gray-700 leading-relaxed">
+                                        Are you sure you want to {showActionModal} this post? 
+                                        {showActionModal === 'delete' && ' This action cannot be undone.'}
+                                    </p>
+
+                                    {showActionModal === 'schedule' && (
+                                        <div className="space-y-4 bg-gray-50/50 p-4 rounded-lg border border-gray-200/60">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={scheduledDate}
+                                                        onChange={(e) => setScheduledDate(e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                                                    <input
+                                                        type="time"
+                                                        value={scheduledTime}
+                                                        onChange={(e) => setScheduledTime(e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                    />
+                                                </div>
                                             </div>
-                                        ) : (
-                                            `Confirm ${showActionModal.charAt(0).toUpperCase() + showActionModal.slice(1)}`
-                                        )}
-                                    </button>
+                                        </div>
+                                    )}
+
+                                    {(showActionModal === 'reject' || showActionModal === 'archive') && (
+                                        <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200/60">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Reason {showActionModal === 'reject' ? '(required)' : '(optional)'}
+                                            </label>
+                                            <textarea
+                                                value={actionReason}
+                                                onChange={(e) => setActionReason(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                                                rows={3}
+                                                placeholder={`Enter reason for ${showActionModal}...`}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="bg-gray-50/50 border-t border-gray-200/60 px-6 py-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <AlertTriangle className="w-3 h-3" />
+                                        <span>
+                                            {showActionModal === 'delete' && 'This action is irreversible'}
+                                            {showActionModal === 'publish' && 'Post will be immediately visible'}
+                                            {showActionModal === 'schedule' && 'Post will be published automatically'}
+                                            {showActionModal === 'reject' && 'Author will be notified'}
+                                            {showActionModal === 'archive' && 'Post will be moved to archive'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setShowActionModal(null)}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(showActionModal)}
+                                            disabled={
+                                                actionLoading ||
+                                                (showActionModal === 'reject' && !actionReason.trim()) ||
+                                                (showActionModal === 'schedule' && (!scheduledDate || !scheduledTime))
+                                            }
+                                            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 shadow-sm transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                                                showActionModal === 'delete' || showActionModal === 'reject'
+                                                    ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                                                    : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+                                            }`}
+                                        >
+                                            {actionLoading ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    Processing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {showActionModal === 'publish' && <CheckCircle className="w-4 h-4" />}
+                                                    {showActionModal === 'schedule' && <Calendar className="w-4 h-4" />}
+                                                    {showActionModal === 'reject' && <X className="w-4 h-4" />}
+                                                    {showActionModal === 'archive' && <Archive className="w-4 h-4" />}
+                                                    {showActionModal === 'delete' && <Trash className="w-4 h-4" />}
+                                                    Confirm {showActionModal.charAt(0).toUpperCase() + showActionModal.slice(1)}
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
+
                 {/* Analysis Modal  */}
                 {showAnalysisModal && analysisResult && (
                 <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
