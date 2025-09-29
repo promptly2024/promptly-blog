@@ -127,20 +127,6 @@ const AuditLogsPage = () => {
     setFilters(f => ({ ...f, page: newPage }));
   };
 
-  // Filter form submit
-  const handleFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFilters(f => ({
-      ...f,
-      page: 1,
-      q: filterInput.q,
-      targetType: filterInput.targetType,
-      action: filterInput.action,
-      startDate: filterInput.startDate ? new Date(filterInput.startDate) : undefined,
-      endDate: filterInput.endDate ? new Date(filterInput.endDate) : undefined
-    }));
-  };
-
   // Loading skeletons
   const SkeletonRow = () => (
     <tr>
@@ -309,7 +295,7 @@ const AuditLogsPage = () => {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading
-              ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
+              ? Array.from({ length: pagination?.pageSize || 10 }).map((_, i) => <SkeletonRow key={i} />)
               : auditLogs.length === 0
                 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">No audit logs found.</td></tr>
                 : auditLogs.map((log, idx) => (
