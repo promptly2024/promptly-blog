@@ -22,8 +22,14 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
 
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "10");
+        // Parse and sanitize pagination parameters
+        let page = parseInt(searchParams.get("page") || "1", 10);
+        let limit = parseInt(searchParams.get("limit") || "10", 10);
+
+        if (isNaN(page) || page < 1) page = 1;
+        if (isNaN(limit) || limit < 1) limit = 10;
+        if (limit > 100) limit = 100;
+
         const status = searchParams.get("status");
         const author = searchParams.get("author");
         const search = searchParams.get("search");
@@ -55,6 +61,7 @@ export async function GET(req: Request) {
                 publishedAt: posts.publishedAt,
                 authorId: posts.authorId,
                 authorName: user.name,
+                authorImage: user.avatarUrl,
             })
             .from(posts)
             .leftJoin(user, eq(posts.authorId, user.id))
@@ -71,8 +78,10 @@ export async function GET(req: Request) {
             pagination: {
                 total,
                 page,
-                limit,
+                pageSize: limit,
                 totalPages: Math.ceil(total / limit),
+                hasNext: offset + postsData.length < total,
+                hasPrev: page > 1,
             },
         });
     } catch (error) {

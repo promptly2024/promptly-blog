@@ -24,6 +24,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { boolean } from 'zod';
 
 // Interface based on your data structure
 interface UsersWithStats {
@@ -42,17 +43,23 @@ interface UsersWithStats {
     createdAt: Date;
     updatedAt: Date;
 }
-
+interface Pagination {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean
+}
 interface ApiResponse {
     users: UsersWithStats[];
-    total: number;
+    pagination: Pagination
 }
 
 const AdminUsersPage = () => {
     const [users, setUsers] = useState<UsersWithStats[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [total, setTotal] = useState(0);
 
     // Filter and search states
     const [searchTerm, setSearchTerm] = useState("");
@@ -61,18 +68,31 @@ const AdminUsersPage = () => {
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-    // Pagination
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
+    const [pagination, setPagination] = useState<Pagination>({
+        page: 0,
+        pageSize: 0,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false
+    });
 
     // UI states
-    const [showFilters, setShowFilters] = useState(false);
     const [confirmRoleChange, setConfirmRoleChange] = useState<{
         userId: string;
         userName: string;
         currentRole: string;
         newRole: string;
     } | null>(null);
+
+    // Add filter/search bar UI state
+    const [filterInput, setFilterInput] = useState({
+        search: "",
+        role: "all",
+        activity: "all",
+        startDate: "",
+        endDate: ""
+    });
 
     // Fetch users from API
     const fetchUsers = async () => {
@@ -85,8 +105,8 @@ const AdminUsersPage = () => {
                 postActivity: activityFilter,
                 sortBy,
                 sortDir,
-                page: page.toString(),
-                limit: limit.toString()
+                page: pagination.page.toString(),
+                limit: pagination.pageSize.toString()
             });
 
             const res = await fetch(`/api/admin/users?${params.toString()}`);
@@ -95,7 +115,7 @@ const AdminUsersPage = () => {
             }
             const data: ApiResponse = await res.json();
             setUsers(data.users);
-            setTotal(data.total);
+            setPagination(data.pagination)
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -106,7 +126,28 @@ const AdminUsersPage = () => {
     // Fetch data when filters change
     useEffect(() => {
         fetchUsers();
-    }, [searchTerm, roleFilter, activityFilter, sortBy, sortDir, page, limit]);
+    }, [searchTerm, roleFilter, activityFilter, sortBy, sortDir, pagination.page, pagination.pageSize]);
+
+    // Sync filterInput with actual filter/search state
+    useEffect(() => {
+        setFilterInput({
+            search: searchTerm,
+            role: roleFilter,
+            activity: activityFilter,
+            startDate: "",
+            endDate: ""
+        });
+        // eslint-disable-next-line
+    }, []);
+
+    // Update filters when filterInput changes
+    useEffect(() => {
+        setSearchTerm(filterInput.search);
+        setRoleFilter(filterInput.role as "all" | "user" | "admin");
+        setActivityFilter(filterInput.activity as "all" | "none" | "published");
+        // You can add date filter logic here if your API supports it
+        // eslint-disable-next-line
+    }, [filterInput]);
 
     // Handle role change with confirmation
     const handleRoleChangeRequest = (userId: string, userName: string, currentRole: string, newRole: string) => {
@@ -178,14 +219,39 @@ const AdminUsersPage = () => {
         return { text: "Highly Active", color: "bg-purple-100 text-purple-700" };
     };
 
-    const totalPages = Math.ceil(total / limit);
+    // Add these handlers for pagination
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > pagination.totalPages) return;
+        setPagination(prev => ({
+            ...prev,
+            page
+        }));
+    };
+
+    const handlePageSizeChange = (pageSize: number) => {
+        setPagination(prev => ({
+            ...prev,
+            pageSize,
+            page: 1
+        }));
+    };
+
+    // Helper for filter chips
+    const activeFilters = [
+        filterInput.search && { key: "search", label: "Search", value: filterInput.search },
+        filterInput.role !== "all" && { key: "role", label: "Role", value: filterInput.role },
+        filterInput.activity !== "all" && { key: "activity", label: "Activity", value: filterInput.activity },
+        filterInput.startDate && { key: "startDate", label: "Start", value: filterInput.startDate },
+        filterInput.endDate && { key: "endDate", label: "End", value: filterInput.endDate }
+    ].filter(Boolean);
 
     return (
-        <div className="min-h-screen bg-gray-50/50 p-6">
+        <div className="min-h-screen bg-gray-50/50 p-2 sm:p-4 md:p-6">
             <div className="max-w-7xl mx-auto space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6" title="User statistics overview">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6" title="User statistics overview">
                     {[
-                        { label: "Total Users", value: total, icon: Users, color: "text-blue-600" },
+                        { label: "Total Users", value: pagination.total, icon: Users, color: "text-blue-600" },
                         { label: "Active Writers", value: users.filter(u => u.postCount > 0).length, icon: FileText, color: "text-green-600" },
                         { label: "Administrators", value: users.filter(u => u.siteRole === "admin").length, icon: Crown, color: "text-amber-600" },
                         { label: "New This Month", value: users.filter(u => new Date(u.createdAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000).length, icon: UserCheck, color: "text-purple-600" }
@@ -203,147 +269,166 @@ const AdminUsersPage = () => {
                         </div>
                     ))}
                 </div>
-
-                {/* Controls */}
-                <div className="bg-white rounded-lg border border-gray-200" title="User controls and filters">
-                    <div className="p-6 space-y-4">
-                        {/* Search and Actions */}
-                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                            <div className="relative flex-1 max-w-md" title="Search users by name or email">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search users..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    title="Type to search users by name or email"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3" title="Actions: filter, export, refresh">
-                                <button
-                                    onClick={() => setShowFilters(!showFilters)}
-                                    className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border transition-colors ${showFilters
-                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                    title="Show or hide advanced filters"
-                                >
-                                    <Filter className="w-4 h-4" />
-                                    Filters
-                                </button>
-
-                                <button
-                                    onClick={handleExportUsers}
-                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 transition-colors"
-                                    title="Export current user list as CSV"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Export
-                                </button>
-
-                                <button
-                                    onClick={fetchUsers}
-                                    disabled={loading}
-                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                    title="Refresh user list"
-                                >
-                                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                                    Refresh
-                                </button>
-                            </div>
+                {/* Improved Filter/Search Bar */}
+                <form
+                    className="flex flex-col md:flex-row flex-wrap gap-2 md:gap-4 mb-4 items-end bg-white p-3 rounded-lg border border-gray-200 shadow-sm w-full"
+                    onSubmit={e => e.preventDefault()}
+                >
+                    <div className="flex-1 min-w-[150px] w-full md:w-auto">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                        <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                className="border rounded pl-8 pr-2 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                                value={filterInput.search}
+                                onChange={e => setFilterInput(f => ({ ...f, search: e.target.value }))}
+                                placeholder="Name or email..."
+                            />
                         </div>
-
-                        {/* Filters */}
-                        {showFilters && (
-                            <div className="border-t border-gray-200 pt-4" title="Advanced filters">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div title="Filter users by role">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1" title="Role filter">Role</label>
-                                        <select
-                                            value={roleFilter}
-                                            onChange={(e) => setRoleFilter(e.target.value as "all" | "user" | "admin")}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            title="Select user role to filter"
-                                        >
-                                            <option value="all" title="Show all roles">All Roles</option>
-                                            <option value="user" title="Show only users">Users</option>
-                                            <option value="admin" title="Show only admins">Admins</option>
-                                        </select>
-                                    </div>
-
-                                    <div title="Filter users by activity">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1" title="Activity filter">Activity</label>
-                                        <select
-                                            value={activityFilter}
-                                            onChange={(e) => setActivityFilter(e.target.value as "all" | "none" | "published")}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            title="Select activity status to filter"
-                                        >
-                                            <option value="all" title="Show all users">All Users</option>
-                                            <option value="none" title="Show users with no posts">No Posts</option>
-                                            <option value="published" title="Show users who have published">Has Published</option>
-                                        </select>
-                                    </div>
-
-                                    <div title="Sort users by field">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1" title="Sort by">Sort By</label>
-                                        <select
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            title="Select field to sort users"
-                                        >
-                                            <option value="createdAt" title="Sort by join date">Join Date</option>
-                                            <option value="name" title="Sort by name">Name</option>
-                                            <option value="email" title="Sort by email">Email</option>
-                                            <option value="postCount" title="Sort by posts">Posts</option>
-                                            <option value="commentCount" title="Sort by comments">Comments</option>
-                                            <option value="reactionCount" title="Sort by reactions">Reactions</option>
-                                        </select>
-                                    </div>
-
-                                    <div title="Sort order">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1" title="Order">Order</label>
-                                        <select
-                                            value={sortDir}
-                                            onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            title="Select sort order"
-                                        >
-                                            <option value="desc" title="Descending order">Descending</option>
-                                            <option value="asc" title="Ascending order">Ascending</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
-                </div>
-
-                {/* Error Alert */}
-                {error && (
-                    <Alert className="border-red-200 bg-red-50">
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
-                        <AlertDescription className="text-red-800">
-                            {error}
-                        </AlertDescription>
-                    </Alert>
+                    <div className="w-full sm:w-auto">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                        <select
+                            className="border rounded px-2 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                            value={filterInput.role}
+                            onChange={e => setFilterInput(f => ({ ...f, role: e.target.value }))}
+                        >
+                            <option value="all">All</option>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Activity</label>
+                        <select
+                            className="border rounded px-2 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                            value={filterInput.activity}
+                            onChange={e => setFilterInput(f => ({ ...f, activity: e.target.value }))}
+                        >
+                            <option value="all">All</option>
+                            <option value="none">No Posts</option>
+                            <option value="published">Has Published</option>
+                        </select>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Sort By</label>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="border rounded px-2 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="createdAt">Join Date</option>
+                            <option value="name">Name</option>
+                            <option value="email">Email</option>
+                            <option value="postCount">Posts</option>
+                            <option value="commentCount">Comments</option>
+                            <option value="reactionCount">Reactions</option>
+                        </select>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Order</label>
+                        <select
+                            value={sortDir}
+                            onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                            className="border rounded px-2 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="desc">Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                    <div className="flex gap-2 mt-2 md:mt-0 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={handleExportUsers}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 transition-colors w-full sm:w-auto"
+                            title="Export current user list as CSV"
+                        >
+                            <Download className="w-4 h-4" />
+                            Export
+                        </button>
+                        <button
+                            type="button"
+                            onClick={fetchUsers}
+                            disabled={loading}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 w-full sm:w-auto"
+                            title="Refresh user list"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
+                </form>
+                {/* Active Filter Chips */}
+                {activeFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4 items-center w-full">
+                        {activeFilters.map((filterObj, idx) => {
+                            // Type guard for filterObj
+                            if (!filterObj || typeof filterObj !== "object") return null;
+                            const filter = filterObj as { key: string; label: string; value: string };
+                            return (
+                                <span
+                                    key={filter.key}
+                                    className="flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-medium"
+                                >
+                                    {filter.label}: {filter.value}
+                                    <button
+                                        type="button"
+                                        className="ml-1 text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                                        aria-label={`Remove ${filter.label} filter`}
+                                        title={`Remove filter: ${filter.label}`}
+                                        onClick={() => {
+                                            setFilterInput(fi => {
+                                                if (filter.key === "role") return { ...fi, role: "all" };
+                                                if (filter.key === "activity") return { ...fi, activity: "all" };
+                                                if (filter.key === "search") return { ...fi, search: "" };
+                                                if (filter.key === "startDate") return { ...fi, startDate: "" };
+                                                if (filter.key === "endDate") return { ...fi, endDate: "" };
+                                                return fi;
+                                            });
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            );
+                        })}
+                        <button
+                            type="button"
+                            className="ml-2 px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium border hover:bg-gray-200"
+                            onClick={() => setFilterInput({
+                                search: "",
+                                role: "all",
+                                activity: "all",
+                                startDate: "",
+                                endDate: ""
+                            })}
+                        >
+                            Clear All
+                        </button>
+                    </div>
                 )}
-
+                
                 {/* Users Table */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" title="User list table">
-                    {/* Add a user-friendly title above the table */}
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50" title="Users table header">
-                        <h2 className="text-lg font-semibold text-gray-800" title="Users List">Users List &mdash; Review, Search, and Manage</h2>
-                        <p className="text-sm text-gray-500 mt-1" title="Table usage instructions">
-                            Use the controls above to filter, search, or export users.
-                        </p>
-                    </div>
+                <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto" title="User list table">
                     {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        // Skeleton loader for users table
+                        <div className="p-6">
+                            <div className="animate-pulse space-y-4">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="flex items-center space-x-4 py-2">
+                                        <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded w-1/3" />
+                                            <div className="h-3 bg-gray-100 rounded w-1/4" />
+                                        </div>
+                                        <div className="h-6 w-16 bg-gray-100 rounded" />
+                                        <div className="h-6 w-20 bg-gray-100 rounded" />
+                                        <div className="h-6 w-24 bg-gray-100 rounded" />
+                                        <div className="h-6 w-20 bg-gray-100 rounded" />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ) : users.length === 0 ? (
                         <div className="text-center py-12">
@@ -358,14 +443,14 @@ const AdminUsersPage = () => {
                     ) : (
                         <>
                             <div className="overflow-x-auto" title="Scrollable user table">
-                                <table className="min-w-full divide-y divide-gray-200" title="User data table">
+                                <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm" title="User data table" style={{ minWidth: 700 }}>
                                     <thead className="bg-gray-50" title="Table columns">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="User column">User</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Role column">Role</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Activity column">Activity</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Stats column">Stats</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Joined column">Joined</th>
+                                            <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="User column">User</th>
+                                            <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Role column">Role</th>
+                                            <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Activity column">Activity</th>
+                                            <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Stats column">Stats</th>
+                                            <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="Joined column">Joined</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200" title="User rows">
@@ -373,7 +458,7 @@ const AdminUsersPage = () => {
                                             const activityStatus = getActivityStatus(user.postCount);
                                             return (
                                                 <tr key={user.id} className="hover:bg-gray-50" title={`User row for ${user.name}`}>
-                                                    <td className="px-6 py-4 whitespace-nowrap" title="User info">
+                                                    <td className="px-2 sm:px-4 md:px-6 py-3 whitespace-nowrap" title="User info">
                                                         <div className="flex items-center">
                                                             <div className="h-10 w-10 flex-shrink-0" title="User avatar">
                                                                 {user.avatarUrl ? (
@@ -397,7 +482,7 @@ const AdminUsersPage = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap" title="User role">
+                                                    <td className="px-2 sm:px-4 md:px-6 py-3 whitespace-nowrap" title="User role">
                                                         <div className="flex items-center space-x-2"
                                                             title={`Current role: ${user.siteRole}. Use dropdown to change role.`}>
                                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadge(user.siteRole)}`} title={`Role badge: ${user.siteRole}`}>
@@ -420,12 +505,12 @@ const AdminUsersPage = () => {
                                                             </select>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap" title="User activity status">
+                                                    <td className="px-2 sm:px-4 md:px-6 py-3 whitespace-nowrap" title="User activity status">
                                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activityStatus.color}`} title={`Activity: ${activityStatus.text}`}>
                                                             {activityStatus.text}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap" title="User stats">
+                                                    <td className="px-2 sm:px-4 md:px-6 py-3 whitespace-nowrap" title="User stats">
                                                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                                                             <div className="flex items-center" title={`Total posts: ${user.postCount}`}>
                                                                 <FileText className="w-4 h-4 mr-1" />
@@ -441,7 +526,7 @@ const AdminUsersPage = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap" title="User join date">
+                                                    <td className="px-2 sm:px-4 md:px-6 py-3 whitespace-nowrap" title="User join date">
                                                         <div className="flex items-center text-sm text-gray-500" title="Joined date">
                                                             <Calendar className="w-4 h-4 mr-1" />
                                                             <span>{new Date(user.createdAt).toLocaleDateString()}</span>
@@ -454,77 +539,67 @@ const AdminUsersPage = () => {
                                 </table>
                             </div>
 
-                            {/* Pagination */}
-                            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6" title="Pagination controls">
-                                <div className="flex-1 flex justify-between items-center">
-                                    <div className="flex items-center text-sm text-gray-700" title="Pagination info">
-                                        <span title="Current results range">Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} results</span>
-                                        <select
-                                            value={limit}
-                                            onChange={(e) => {
-                                                setLimit(parseInt(e.target.value));
-                                                setPage(1);
-                                            }}
-                                            className="ml-2 border border-gray-300 rounded px-2 py-1 text-sm"
-                                            title="Select number of results per page"
-                                        >
-                                            <option value={10} title="Show 10 per page">10</option>
-                                            <option value={20} title="Show 20 per page">20</option>
-                                            <option value={50} title="Show 50 per page">50</option>
-                                        </select>
-                                        <span className="ml-1" title="Results per page">per page</span>
-                                    </div>
-
-                                    <div className="flex items-center space-x-2" title="Page navigation">
-                                        <button
-                                            onClick={() => setPage(page - 1)}
-                                            disabled={page === 1}
-                                            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Go to previous page"
-                                        >
-                                            <ChevronLeft className="w-4 h-4 mr-1" />
-                                            Previous
-                                        </button>
-
-                                        <div className="flex items-center space-x-1" title="Page numbers">
-                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                                const pageNum = i + Math.max(1, page - 2);
-                                                return (
-                                                    <button
-                                                        key={pageNum}
-                                                        onClick={() => setPage(pageNum)}
-                                                        className={`px-3 py-2 text-sm rounded-md ${page === pageNum
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        title={`Go to page ${pageNum}`}
-                                                    >
-                                                        {pageNum}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <button
-                                            onClick={() => setPage(page + 1)}
-                                            disabled={page === totalPages}
-                                            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Go to next page"
-                                        >
-                                            Next
-                                            <ChevronRight className="w-4 h-4 ml-1" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </>
+
                     )}
                 </div>
 
+                {/* Pagination Controls */}
+                {pagination && (
+                    <div className="flex flex-col md:flex-row flex-wrap md:items-center md:justify-between mt-4 gap-2 w-full px-1">
+                        <div className="text-xs text-gray-600 text-center md:text-left">
+                            Page {pagination.page} of {pagination.totalPages} | {pagination.total} users
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    className="flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer transition-colors bg-white hover:bg-gray-100"
+                                    disabled={!pagination.hasPrev}
+                                    onClick={() => handlePageChange(pagination.page - 1)}
+                                    title="Go to previous page"
+                                >
+                                    <ChevronLeft /> <span className="hidden sm:inline">Previous</span>
+                                </button>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={pagination.totalPages}
+                                    value={pagination.page}
+                                    onChange={e => handlePageChange(Number(e.target.value))}
+                                    className="w-full sm:w-14 px-2 py-1 border rounded text-xs sm:text-sm text-center"
+                                    style={{ minWidth: 0 }}
+                                    title="Current page number"
+                                />
+                                <button
+                                    className="flex-1 sm:flex-none px-2 sm:px-3 py-1 rounded border text-xs sm:text-sm flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer transition-colors bg-white hover:bg-gray-100"
+                                    disabled={!pagination.hasNext}
+                                    onClick={() => handlePageChange(pagination.page + 1)}
+                                    title="Go to next page"
+                                >
+                                    <span className="hidden sm:inline">Next</span> <ChevronRight />
+                                </button>
+                            </div>
+                            {/* Page size selector */}
+                            <select
+                                className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2 px-2 py-1 border rounded text-xs sm:text-sm cursor-pointer bg-white"
+                                value={pagination.pageSize}
+                                onChange={e =>
+                                    handlePageSizeChange(Number(e.target.value))
+                                }
+                                title="Select number of users per page"
+                            >
+                                {[10, 20, 30, 50].map(size => (
+                                    <option key={size} value={size}>{size} / page</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                )}
+
                 {/* Role Change Confirmation Modal */}
                 {confirmRoleChange && (
-                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity" title="Role change confirmation dialog">
-                        <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl" title="Confirm role change">
+                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 transition-opacity" title="Role change confirmation dialog">
+                        <div className="bg-white rounded-lg max-w-xs sm:max-w-md w-full p-4 sm:p-6 shadow-2xl" title="Confirm role change">
                             <div className="flex items-center mb-4">
                                 <AlertTriangle className="w-6 h-6 text-amber-600 mr-2" />
                                 <h3 className="text-lg font-medium text-gray-900" title="Confirm role change heading">Confirm Role Change</h3>
@@ -533,7 +608,7 @@ const AdminUsersPage = () => {
                                 Are you sure you want to change <strong>{confirmRoleChange.userName}</strong> to <strong>{confirmRoleChange.newRole.toLocaleUpperCase()}</strong>?
                                 This will give them {confirmRoleChange.newRole === 'admin' ? 'full administrative access' : 'standard user permissions'}.
                             </p>
-                            <div className="flex justify-end space-x-3" title="Confirmation actions">
+                            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3" title="Confirmation actions">
                                 <button
                                     onClick={() => setConfirmRoleChange(null)}
                                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -552,8 +627,8 @@ const AdminUsersPage = () => {
                         </div>
                     </div>
                 )}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

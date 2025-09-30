@@ -221,6 +221,9 @@ const DetailsModal: React.FC<{
                                             disabled={updating || isResolved}
                                             title="Write your reply"
                                         />
+                                        <div className="mb-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                                            You can reply only once. Your reply will be sent to the user via email.
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -339,6 +342,7 @@ const Comments = () => {
 
     useEffect(() => {
         fetchComments(1, perPage, search, statusFilter);
+        updateStatusNewToInProgress();
     }, [fetchComments, perPage, search, statusFilter]);
 
     const handleUpdateStatus = useCallback(async (id: string, status: "in_progress" | "resolved", reply?: string) => {
@@ -364,6 +368,18 @@ const Comments = () => {
             setUpdating(false);
         }
     }, []);
+
+    const isOlderThan24Hours = (date: Date | string) => {
+        return Date.now() - new Date(date).getTime() > 24 * 60 * 60 * 1000;
+    };
+
+    const updateStatusNewToInProgress = () => {
+        comments
+            .filter(comment => comment.query.status === "new" && isOlderThan24Hours(comment.query.createdAt))
+            .forEach(comment => {
+                handleUpdateStatus(comment.query.id, "in_progress");
+            });
+    }
 
     const handleDelete = useCallback(async (id: string) => {
         setDeleting(true);
@@ -486,7 +502,7 @@ const Comments = () => {
                                                         ? "bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs"
                                                         : "bg-green-100 text-green-700 px-2 py-1 rounded text-xs"
                                             }
-                                            title={`Status: ${comment.query.status.replace('_', ' ')}`}
+                                                title={`Status: ${comment.query.status.replace('_', ' ')}`}
                                             >
                                                 {comment.query.status.replace('_', ' ')}
                                             </span>

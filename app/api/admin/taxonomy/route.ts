@@ -91,6 +91,13 @@ export async function POST(req: Request) {
                 { status: 400 }
             );
         }
+        if (body.name.length > 64 || body.slug && body.slug.length > 64) {
+            return new Response(
+                JSON.stringify({ error: "Name or slug too long (max 64 chars)" }),
+                { status: 400 }
+            );
+        }
+
 
         if (body.type === "category") {
             // Check if category already exists

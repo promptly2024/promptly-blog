@@ -75,6 +75,9 @@ const TaxonomyAdminPage = () => {
 
   const [uploadingBulk, setUploadingBulk] = useState(false);
 
+  // Track if user has manually edited the slug
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
   // Fetch taxonomy data
   const fetchTaxonomy = async () => {
     setLoading(true);
@@ -103,7 +106,8 @@ const TaxonomyAdminPage = () => {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 64); // limit slug length to 64 chars
   };
 
   // Handle creating new item
@@ -112,10 +116,16 @@ const TaxonomyAdminPage = () => {
     setAddingItems(true);
 
     try {
+      let slugToUse = newItemSlug;
+      if (activeTab === 'tags' && !slugManuallyEdited) {
+        slugToUse = generateSlug(newItemName);
+        setNewItemSlug(slugToUse);
+      }
+
       const payload = {
         type: activeTab === 'categories' ? 'category' : 'tag',
         name: newItemName.trim(),
-        ...(activeTab === 'tags' && { slug: newItemSlug || generateSlug(newItemName) })
+        ...(activeTab === 'tags' && { slug: slugToUse || generateSlug(newItemName) })
       };
 
       const response = await fetch('/api/admin/taxonomy', {
@@ -125,7 +135,8 @@ const TaxonomyAdminPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create item');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to create item');
       }
 
       const data = await response.json();
@@ -137,8 +148,10 @@ const TaxonomyAdminPage = () => {
       setShowAddForm(false);
       setNewItemName('');
       setNewItemSlug('');
+      setSlugManuallyEdited(false);
       toast.success(`${activeTab === 'categories' ? 'Category' : 'Tag'} created successfully`);
     } catch (err: any) {
+      toast.error(err.message || 'Failed to create item');
       setError(err.message);
     } finally {
       setAddingItems(false);
@@ -175,8 +188,26 @@ const TaxonomyAdminPage = () => {
               throw new Error(`Failed to insert ${item.type}: ${item.name}`);
             }
             const data = await res.json();
-            setCategories((prev) => item.type === "category" && data.category ? [...prev, data.category] : prev);
-            setTags((prev) => item.type === "tag" && data.tag ? [...prev, data.tag] : prev);
+            setCategories((prev) => {
+              if (
+                item.type === "category" &&
+                data.category &&
+                !prev.some((c) => c.name.toLowerCase() === data.category.name.toLowerCase())
+              ) {
+                return [...prev, data.category];
+              }
+              return prev;
+            });
+            setTags((prev) => {
+              if (
+                item.type === "tag" &&
+                data.tag &&
+                !prev.some((t) => t.name.toLowerCase() === data.tag.name.toLowerCase())
+              ) {
+                return [...prev, data.tag];
+              }
+              return prev;
+            });
           } catch (err) {
             console.error("Taxonomy insert error:", err);
           }
@@ -200,11 +231,16 @@ const TaxonomyAdminPage = () => {
     if (!editingItem || !editingItem.name.trim()) return;
 
     try {
+      let slugToUse = editingItem.slug;
+      if (editingItem.type === 'tag' && (!slugToUse || !slugManuallyEdited)) {
+        slugToUse = generateSlug(editingItem.name);
+      }
+
       const payload = {
         type: editingItem.type,
         id: editingItem.id,
         name: editingItem.name.trim(),
-        ...(editingItem.type === 'tag' && { slug: editingItem.slug || generateSlug(editingItem.name) })
+        ...(editingItem.type === 'tag' && { slug: slugToUse })
       };
 
       const response = await fetch('/api/admin/taxonomy', {
@@ -219,6 +255,7 @@ const TaxonomyAdminPage = () => {
 
       await fetchTaxonomy();
       setEditingItem(null);
+      setSlugManuallyEdited(false);
       toast.success(`${editingItem.type === 'category' ? 'Category' : 'Tag'} updated successfully`);
     } catch (err: any) {
       setError(err.message);
@@ -263,6 +300,15 @@ const TaxonomyAdminPage = () => {
       filtered = filtered.filter(item => item.postsCount === 0);
     }
 
+    // Remove duplicates by name (case-insensitive)
+    const seenNames = new Set<string>();
+    filtered = filtered.filter(item => {
+      const lowerName = item.name.toLowerCase();
+      if (seenNames.has(lowerName)) return false;
+      seenNames.add(lowerName);
+      return true;
+    });
+
     // Sort
     filtered.sort((a, b) => {
       let aVal, bVal;
@@ -302,115 +348,154 @@ const TaxonomyAdminPage = () => {
   const filteredData = getFilteredData();
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50/50 p-2 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 w-full">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Categories</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalCategories}</p>
+        {loading ? (
+          <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6 w-full">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0 animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="h-3 w-20 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-6 w-12 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="p-2 sm:p-3 rounded-lg bg-gray-100 text-gray-300 flex items-center justify-center">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full"></div>
+                  </div>
+                </div>
               </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6 w-full">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Categories</p>
+                  <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalCategories}</p>
+                </div>
+                <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Tags</p>
+                  <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalTags}</p>
+                </div>
+                <div className="p-2 sm:p-3 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                  <Tag className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Unused Categories</p>
+                  <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{unusedCategories}</p>
+                </div>
+                <div className="p-2 sm:p-3 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Archive className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Unused Tags</p>
+                  <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{unusedTags}</p>
+                </div>
+                <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Tags</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{totalTags}</p>
-              </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-                <Tag className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Unused Categories</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{unusedCategories}</p>
-              </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Archive className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-col justify-between shadow-sm min-w-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Unused Tags</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">{unusedTags}</p>
-              </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
-              Top Categories by Usage
-            </h3>
-            <div className="space-y-3">
-              {mostUsedCategories.map((category, index) => (
-                <div key={category.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-medium flex items-center justify-center mr-3">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{category.name}</span>
-                  </div>
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <FileText className="w-4 h-4 mr-1" />
-                    {category.postsCount}
-                  </span>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 min-w-0 animate-pulse">
+                <div className="h-5 w-40 bg-gray-200 rounded mb-4"></div>
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-6 h-6 rounded-full bg-gray-200 mr-3"></div>
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="h-4 w-10 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {mostUsedCategories.length === 0 && (
-                <p className="text-sm text-gray-500">No categories with posts yet</p>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 min-w-0">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+                Top Categories by Usage
+              </h3>
+              <div className="space-y-3">
+                {mostUsedCategories.map((category, index) => (
+                  <div key={category.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-medium flex items-center justify-center mr-3">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                    </div>
+                    <span className="text-sm text-gray-500 flex items-center">
+                      <FileText className="w-4 h-4 mr-1" />
+                      {category.postsCount}
+                    </span>
+                  </div>
+                ))}
+                {mostUsedCategories.length === 0 && (
+                  <p className="text-sm text-gray-500">No categories with posts yet</p>
+                )}
+              </div>
+            </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
-              Top Tags by Usage
-            </h3>
-            <div className="space-y-3">
-              {mostUsedTags.map((tag, index) => (
-                <div key={tag.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center mr-3">
-                      {index + 1}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 min-w-0">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
+                Top Tags by Usage
+              </h3>
+              <div className="space-y-3">
+                {mostUsedTags.map((tag, index) => (
+                  <div key={tag.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center mr-3">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">{tag.name}</span>
+                    </div>
+                    <span className="text-sm text-gray-500 flex items-center">
+                      <FileText className="w-4 h-4 mr-1" />
+                      {tag.postsCount}
                     </span>
-                    <span className="text-sm font-medium text-gray-900">{tag.name}</span>
                   </div>
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <FileText className="w-4 h-4 mr-1" />
-                    {tag.postsCount}
-                  </span>
-                </div>
-              ))}
-              {mostUsedTags.length === 0 && (
-                <p className="text-sm text-gray-500">No tags with posts yet</p>
-              )}
+                ))}
+                {mostUsedTags.length === 0 && (
+                  <p className="text-sm text-gray-500">No tags with posts yet</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Error Alert */}
         {error && (
-          <Alert className="border-red-200 bg-red-50">
+          <Alert className="border-red-200 bg-red-50 px-2 py-2 sm:px-4 sm:py-3">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">{error}</AlertDescription>
           </Alert>
@@ -420,7 +505,7 @@ const TaxonomyAdminPage = () => {
         <div className="bg-white rounded-lg border border-gray-200">
           {/* Tabs */}
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <nav className="flex flex-wrap space-x-2 sm:space-x-8 px-2 sm:px-6" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab('categories')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories'
@@ -445,8 +530,8 @@ const TaxonomyAdminPage = () => {
           </div>
 
           {/* Controls */}
-          <div className="p-4 sm:p-6 border-b border-gray-200">
-            <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 items-stretch sm:items-center justify-between">
+          <div className="p-2 sm:p-6 border-b border-gray-200">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4 items-stretch sm:items-center justify-between flex-wrap">
               <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2 sm:gap-4 w-full">
                 <div className="relative flex-1 max-w-full sm:max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -480,8 +565,7 @@ const TaxonomyAdminPage = () => {
                   </select>
                 </div>
               </div>
-
-              <div className="flex flex-row gap-2 sm:gap-3 items-center mt-2 sm:mt-0">
+              <div className="flex flex-row gap-2 sm:gap-3 items-center mt-2 sm:mt-0 flex-wrap">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -494,7 +578,7 @@ const TaxonomyAdminPage = () => {
 
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add {activeTab === 'categories' ? 'Category' : 'Tag'}
@@ -505,8 +589,8 @@ const TaxonomyAdminPage = () => {
 
           {/* Add Form */}
           {showAddForm && (
-            <div className="p-4 sm:p-6 bg-gray-50 border-b border-gray-200">
-              <div className="max-w-full sm:max-w-md space-y-4">
+            <div className="p-2 sm:p-6 bg-gray-50 border-b border-gray-200">
+              <div className="max-w-full sm:max-w-md space-y-3 sm:space-y-4">
                 <h3 className="text-lg font-medium text-gray-900">
                   Add New {activeTab === 'categories' ? 'Category' : 'Tag'}
                 </h3>
@@ -518,8 +602,11 @@ const TaxonomyAdminPage = () => {
                     value={newItemName}
                     onChange={(e) => {
                       setNewItemName(e.target.value);
-                      if (activeTab === 'tags' && !newItemSlug) {
-                        setNewItemSlug(generateSlug(e.target.value));
+                      if (activeTab === 'tags') {
+                        // If user hasn't manually edited slug, always update slug on name change
+                        if (!slugManuallyEdited) {
+                          setNewItemSlug(generateSlug(e.target.value));
+                        }
                       }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -533,7 +620,10 @@ const TaxonomyAdminPage = () => {
                     <input
                       type="text"
                       value={newItemSlug}
-                      onChange={(e) => setNewItemSlug(e.target.value)}
+                      onChange={(e) => {
+                        setNewItemSlug(e.target.value);
+                        setSlugManuallyEdited(true);
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="tag-slug"
                     />
@@ -577,11 +667,44 @@ const TaxonomyAdminPage = () => {
 
           {/* Table */}
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="overflow-x-auto w-full">
+              <table className="min-w-[500px] sm:min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3"></th>
+                    {activeTab === 'tags' && <th className="px-2 sm:px-6 py-2 sm:py-3"></th>}
+                    <th className="px-2 sm:px-6 py-2 sm:py-3"></th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3"></th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {[...Array(6)].map((_, i) => (
+                    <tr key={i} className="hover:bg-gray-50 animate-pulse">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                      </td>
+                      {activeTab === 'tags' && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 w-10 bg-gray-200 rounded"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-8 sm:py-12">
               {activeTab === 'categories' ? <FolderOpen className="mx-auto h-12 w-12 text-gray-400" /> : <Tag className="mx-auto h-12 w-12 text-gray-400" />}
               <h3 className="mt-2 text-sm font-medium text-gray-900">No {activeTab} found</h3>
               <p className="mt-1 text-sm text-gray-500">
@@ -589,17 +712,17 @@ const TaxonomyAdminPage = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto w-full">
+              <table className="min-w-[500px] sm:min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Name</th>
                     {activeTab === 'tags' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Slug</th>
                     )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posts</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Created</th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Posts</th>
+                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -704,13 +827,13 @@ const TaxonomyAdminPage = () => {
               </table>
             </div>
           )}
-          <p className="p-4 text-sm text-gray-500">Showing {filteredData.length} of {activeTab === 'categories' ? totalCategories : totalTags} {activeTab}</p>
+          <p className="p-2 sm:p-4 text-xs sm:text-sm text-gray-500">Showing {filteredData.length} of {activeTab === 'categories' ? totalCategories : totalTags} {activeTab}</p>
         </div>
 
         <div className="flex justify-end">
           <button
             onClick={handleSampleTaxonomyCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 transition-colors"
             disabled={uploadingBulk}
           >
             {uploadingBulk ? (
@@ -731,8 +854,8 @@ const TaxonomyAdminPage = () => {
 
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+            <div className="bg-white rounded-lg max-w-full sm:max-w-md w-full p-4 sm:p-6">
               <div className="flex items-center mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600 mr-2" />
                 <h3 className="text-lg font-medium text-gray-900">Confirm Deletion</h3>
@@ -768,7 +891,7 @@ const TaxonomyAdminPage = () => {
                 <p className="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-2 sm:space-x-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -788,8 +911,8 @@ const TaxonomyAdminPage = () => {
 
         {/* Bulk Actions Modal */}
         {selectedItems.length > 0 && (
-          <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-3">
+          <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 sm:p-4 w-[90vw] max-w-xs">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <span className="text-sm font-medium text-gray-900">
                 {selectedItems.length} {activeTab} selected
               </span>

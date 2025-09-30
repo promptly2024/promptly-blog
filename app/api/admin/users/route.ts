@@ -132,13 +132,18 @@ export async function GET(request: NextRequest) {
         }
 
         // Paginate after filtering by post activity and sorting by stats
-        const paginatedUsers = filteredUsers.slice(0, pageSize);
-
-        return NextResponse.json({
-            total: filteredUsers.length,
+        const totalFiltered = filteredUsers.length;
+        const paginatedUsers = filteredUsers.slice(offset, offset + pageSize);
+        const pagination = {
             page: pageNum,
-            hasMore: offset + paginatedUsers.length < filteredUsers.length,
-            limit: pageSize,
+            pageSize: pageSize,
+            total: totalFiltered,
+            totalPages: Math.ceil(totalFiltered / pageSize),
+            hasNext: offset + paginatedUsers.length < totalFiltered,
+            hasPrev: pageNum > 1
+        }
+        return NextResponse.json({
+            pagination,
             users: paginatedUsers,
         });
     } catch (err) {
