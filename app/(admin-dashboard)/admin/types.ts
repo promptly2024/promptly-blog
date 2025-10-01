@@ -59,6 +59,14 @@ interface Recent {
         reason: string | null;
         decidedAt: Date;
         decidedBy: string;
+        title: string | null;
+        authorName: string | null;
+        authorEmail: string | null;
+        authorProfileImage: string | null;
+        coverImageUrl: string | null;
+        approvedByName: string | null;
+        approvedByEmail: string | null;
+        approvedByProfileImage: string | null;
     }[];
     auditLogs: {
         id: string;
@@ -67,6 +75,7 @@ interface Recent {
         targetId: string;
         action: "create" | "update" | "delete" | "delete_attempt" | "submit" | "approve" | "reject" | "publish" | "archive" | "invite" | "invite_accept" | "invite_decline" | "invite_revoke" | "login" | "logout" | "other";
         createdAt: Date;
+        metadata: { [key: string]: any };
     }[];
     users: {
         id: string;

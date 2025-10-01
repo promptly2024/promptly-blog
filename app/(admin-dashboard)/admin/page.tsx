@@ -12,6 +12,7 @@ import {
     Legend,
 } from 'chart.js';
 import { AdminOverviewResponse } from './types';
+import { formatDateInPast } from '@/utils/date-formatter';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -34,10 +35,64 @@ const AdminHomePage = () => {
 
     if (!overviewData) {
         return (
-            <div className="flex justify-center items-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <span className="text-gray-500 text-sm">Loading dashboard...</span>
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-3 sm:p-6">
+                <div className="max-w-[1600px] mx-auto space-y-6">
+                    {/* Skeleton Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
+                        {[...Array(7)].map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 animate-pulse">
+                                <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-800 mb-3" />
+                                <div className="h-7 bg-gray-200 dark:bg-gray-800 rounded w-2/3 mb-2" />
+                                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-1/2" />
+                            </div>
+                        ))}
+                    </div>
+                    {/* Skeleton Workflow Section */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {[...Array(2)].map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 animate-pulse">
+                                <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/3 mb-4" />
+                                {[...Array(3)].map((_, j) => (
+                                    <div key={j} className="flex items-center gap-3 mb-3">
+                                        <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-800" />
+                                        <div className="flex-1">
+                                            <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3 mb-2" />
+                                            <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/2" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {[...Array(2)].map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 animate-pulse">
+                                <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/3 mb-4" />
+                                {[...Array(3)].map((_, j) => (
+                                    <div key={j} className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800" />
+                                        <div className="flex-1">
+                                            <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3 mb-2" />
+                                            <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/2" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 animate-pulse">
+                        <div className="h-7 bg-gray-200 dark:bg-gray-800 rounded w-1/4 mb-6" />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="rounded-xl p-4 border bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800">
+                                    <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded w-1/3 mb-4" />
+                                    <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -94,14 +149,14 @@ const AdminHomePage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-3 sm:p-6">
             <div className="max-w-[1600px] mx-auto space-y-6">
-                {/* Stats Grid */}
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
                     {countCards.map(card => (
                         <div
                             key={card.label}
                             className="relative bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-gray-800"
                         >
-                            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`}/>
+                            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
                             <div className="p-4 relative">
                                 <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${card.gradient} text-white mb-3`}>
                                     {card.icon}
@@ -117,7 +172,6 @@ const AdminHomePage = () => {
                     ))}
                 </div>
 
-                {/* Posts Workflow - Side by Side */}
                 {(overviewData.workflow.postsUnderReview.length > 0 || overviewData.workflow.scheduledPosts.length > 0) && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {overviewData.workflow.postsUnderReview.length > 0 && (
@@ -208,7 +262,6 @@ const AdminHomePage = () => {
                     </div>
                 )}
 
-                {/* Workflow Items Grid */}
                 {(overviewData.workflow.flaggedComments.length > 0 ||
                     overviewData.workflow.pendingInvites.length > 0 ||
                     overviewData.workflow.pendingQueries.length > 0) && (
@@ -289,8 +342,7 @@ const AdminHomePage = () => {
                         </div>
                     )}
 
-                {/* Recent Activity Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {overviewData.recent.users.length > 0 && (
                         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
                             <div className="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-b border-green-100 dark:border-green-900/30">
@@ -312,33 +364,13 @@ const AdminHomePage = () => {
                                         <div className="flex-1 min-w-0">
                                             <div className="font-semibold text-sm text-gray-900 dark:text-white truncate">{user.name}</div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                                            <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                                                Joined: {formatDateInPast(user.createdAt)}
+                                            </div>
                                         </div>
                                         <span className="text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-medium">
                                             {user.siteRole}
                                         </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {overviewData.recent.approvals.length > 0 && (
-                        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                            <div className="px-4 py-3 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-b border-cyan-100 dark:border-cyan-900/30">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle className="h-4 w-4 text-cyan-600" />
-                                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white">Recent Approvals</h3>
-                                </div>
-                            </div>
-                            <div className="max-h-80 overflow-y-auto p-3 space-y-2">
-                                {overviewData.recent.approvals.slice(0, 5).map((approval, idx) => (
-                                    <div key={idx} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs px-2 py-1 bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 rounded-full font-semibold">
-                                                {approval.decision}
-                                            </span>
-                                        </div>
-                                        {approval.reason && <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">{approval.reason}</p>}
                                     </div>
                                 ))}
                             </div>
@@ -358,6 +390,7 @@ const AdminHomePage = () => {
                                     <div key={log.id} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                         <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
                                             <span className="text-indigo-600 dark:text-indigo-400">{log.action}</span> on {log.targetType}
+                                            <span className="text-gray-500 dark:text-gray-400"> ({log.metadata.message ? log.metadata.message : "No message"})</span>
                                         </p>
                                     </div>
                                 ))}
@@ -365,6 +398,90 @@ const AdminHomePage = () => {
                         </div>
                     )}
                 </div>
+                {overviewData.recent.approvals.length > 0 && (
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+                        <div className="px-4 py-3 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-b border-cyan-100 dark:border-cyan-900/30">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-cyan-600" />
+                                <h3 className="font-semibold text-sm text-gray-900 dark:text-white">Recent Approvals</h3>
+                            </div>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto p-3 space-y-2">
+                            {overviewData.recent.approvals.slice(0, 5).map((approval, idx) => (
+                                <div
+                                    key={idx}
+                                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    <div className="flex-shrink-0">
+                                        {approval.coverImageUrl ? (
+                                            <img src={approval.coverImageUrl as string} alt="" className="w-14 h-14 rounded-lg object-cover shadow-sm" />
+                                        ) : (
+                                            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-cyan-200 to-blue-200 dark:from-cyan-900 dark:to-blue-900 flex items-center justify-center shadow-sm">
+                                                <FileText className="w-7 h-7 text-cyan-400 dark:text-cyan-600" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1"
+                                            title={`Post titled "${approval.title || "Untitled Post"}" was ${approval.decision.replace("_", " ")} by ${approval.approvedByName || approval.approvedByEmail || approval.decidedBy || "an approver"}`}    >
+                                            <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">{approval.title || "Untitled Post"}</span>
+                                            <span className="hidden sm:inline-block mx-2 text-gray-300 dark:text-gray-600">|</span>
+                                            <span className="text-xs px-2 py-1 bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 rounded-full font-semibold capitalize">
+                                                {approval.decision.replace("_", " ")}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                                            <div className="flex items-center gap-1"
+                                                title={`Author ${approval.authorName} with email ${approval.authorEmail} wrote this post.`}>
+                                                {approval.authorProfileImage ? (
+                                                    <img src={approval.authorProfileImage} alt="" className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800" />
+                                                ) : (
+                                                    <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                                        <UserCheck2 className="w-3 h-3" />
+                                                    </div>
+                                                )}
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate">
+                                                    {approval.authorName || approval.authorEmail || "Unknown Author"}
+                                                </span>
+                                                <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(Wrote)</span>
+                                            </div>
+                                            <span className="mx-1 text-gray-300 dark:text-gray-600 hidden sm:inline-block">·</span>
+
+                                            <div className="flex items-center gap-1"
+                                                title={`Admin ${approval.approvedByName} with email ${approval.approvedByEmail} took the decision ${approval.decision} on this post ${approval.reason ? ` with reason: ${approval.reason}` : ""} on ${new Date(approval.decidedAt).toLocaleString()}`}>
+                                                {approval.approvedByProfileImage ? (
+                                                    <img src={approval.approvedByProfileImage} alt="" className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800" />
+                                                ) : (
+                                                    <div className="w-5 h-5 rounded-full bg-cyan-300 dark:bg-cyan-700 flex items-center justify-center">
+                                                        <UserCheck2 className="w-3 h-3 text-white" />
+                                                    </div>
+                                                )}
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate">
+                                                    {approval.approvedByName || approval.approvedByEmail || approval.decidedBy || "Approver"}
+                                                </span>
+                                                <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(Decision by)</span>
+                                            </div>
+                                        </div>
+                                        {/* Reason */}
+                                        {approval.reason && (
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">{approval.reason}</p>
+                                        )}
+                                    </div>
+                                    {/* Date */}
+                                    <div className="flex-shrink-0 mt-2 sm:mt-0 sm:ml-2">
+                                        <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                                            {new Date(approval.decidedAt).toLocaleString(undefined, {
+                                                dateStyle: "medium",
+                                                timeStyle: "short"
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
 
                 {/* Trends - Tags and Categories in Single Row */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">

@@ -127,8 +127,19 @@ export async function GET(req: Request) {
                 reason: approvalLog.reason,
                 decidedAt: approvalLog.decidedAt,
                 decidedBy: approvalLog.decidedByUserId,
+                title: posts.title,
+                authorName: user.name,
+                authorEmail: user.email,
+                authorProfileImage: user.avatarUrl,
+                coverImageUrl: media.url,
+                approvedByName: user.name,
+                approvedByEmail: user.email,
+                approvedByProfileImage: user.avatarUrl,
             })
             .from(approvalLog)
+            .leftJoin(posts, eq(approvalLog.postId, posts.id))
+            .leftJoin(user, eq(approvalLog.decidedByUserId, user.id))
+            .leftJoin(media, eq(posts.coverImageId, media.id))
             .orderBy(desc(approvalLog.decidedAt))
             .limit(5);
 
@@ -140,6 +151,7 @@ export async function GET(req: Request) {
                 targetId: auditLogs.targetId,
                 action: auditLogs.action,
                 createdAt: auditLogs.createdAt,
+                metadata: auditLogs.metadata,
             })
             .from(auditLogs)
             .orderBy(desc(auditLogs.createdAt))
