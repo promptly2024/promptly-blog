@@ -4,6 +4,45 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { posts, user, categories, tags, postCategories, postTags, postCollaborators, media } from '@/db/schema';
 
+// Profanity detection function
+function detectProfanity(text: string) {
+  const results = {
+    hasProfanity: false,
+    profanityFlags: [] as string[],
+    severity: 'none' as 'none' | 'low' | 'medium' | 'high'
+  };
+
+  // Common profanity words
+  const profanityPatterns = [
+    /\b(fuck|shit|damn|bitch|ass|bastard|hell|crap|dick|piss)\b/gi,
+    /\b(nigger|nigga|fag|faggot|retard|slut|whore|cunt|pussy)\b/gi,
+  ];
+
+  // Check for profanity
+  let totalMatches = 0;
+  profanityPatterns.forEach((pattern) => {
+    const matches = text.match(pattern);
+    if (matches && matches.length > 0) {
+      results.hasProfanity = true;
+      totalMatches += matches.length;
+      results.profanityFlags.push(
+        `Found ${matches.length} instance(s) of inappropriate language`
+      );
+    }
+  });
+
+  // Determine severity based on total matches
+  if (totalMatches > 5) {
+    results.severity = 'high';
+  } else if (totalMatches > 2) {
+    results.severity = 'medium';
+  } else if (totalMatches > 0) {
+    results.severity = 'low';
+  }
+
+  return results;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,6 +117,46 @@ export async function POST(
       .leftJoin(user, eq(postCollaborators.userId, user.id))
       .where(eq(postCollaborators.postId, postId));
 
+    // **PROFANITY CHECK**
+    const titleModeration = detectProfanity(postData.title);
+    const contentModeration = detectProfanity(postData.contentMd);
+    const excerptModeration = postData.excerpt 
+      ? detectProfanity(postData.excerpt) 
+      : { hasProfanity: false, profanityFlags: [], severity: 'none' as const };
+
+    const moderationResults = {
+      flagged: titleModeration.hasProfanity || contentModeration.hasProfanity || excerptModeration.hasProfanity,
+      profanity: {
+        detected: titleModeration.hasProfanity || contentModeration.hasProfanity || excerptModeration.hasProfanity,
+        locations: {
+          title: titleModeration.hasProfanity,
+          content: contentModeration.hasProfanity,
+          excerpt: excerptModeration.hasProfanity,
+        },
+        details: [
+          ...titleModeration.profanityFlags.map(f => `Title: ${f}`),
+          ...contentModeration.profanityFlags.map(f => `Content: ${f}`),
+          ...excerptModeration.profanityFlags.map(f => `Excerpt: ${f}`),
+        ]
+      },
+      overallSeverity: Math.max(
+        titleModeration.severity === 'high' ? 3 : titleModeration.severity === 'medium' ? 2 : titleModeration.severity === 'low' ? 1 : 0,
+        contentModeration.severity === 'high' ? 3 : contentModeration.severity === 'medium' ? 2 : contentModeration.severity === 'low' ? 1 : 0,
+        excerptModeration.severity === 'high' ? 3 : excerptModeration.severity === 'medium' ? 2 : excerptModeration.severity === 'low' ? 1 : 0
+      ) >= 3 ? 'high' : Math.max(
+        titleModeration.severity === 'high' ? 3 : titleModeration.severity === 'medium' ? 2 : titleModeration.severity === 'low' ? 1 : 0,
+        contentModeration.severity === 'high' ? 3 : contentModeration.severity === 'medium' ? 2 : contentModeration.severity === 'low' ? 1 : 0,
+        excerptModeration.severity === 'high' ? 3 : excerptModeration.severity === 'medium' ? 2 : excerptModeration.severity === 'low' ? 1 : 0
+      ) >= 2 ? 'medium' : Math.max(
+        titleModeration.severity === 'high' ? 3 : titleModeration.severity === 'medium' ? 2 : titleModeration.severity === 'low' ? 1 : 0,
+        contentModeration.severity === 'high' ? 3 : contentModeration.severity === 'medium' ? 2 : contentModeration.severity === 'low' ? 1 : 0,
+        excerptModeration.severity === 'high' ? 3 : excerptModeration.severity === 'medium' ? 2 : excerptModeration.severity === 'low' ? 1 : 0
+      ) >= 1 ? 'low' : 'none',
+      recommendation: (titleModeration.hasProfanity || contentModeration.hasProfanity || excerptModeration.hasProfanity)
+        ? '🚫 IMMEDIATE REJECTION RECOMMENDED - Contains inappropriate/profane language'
+        : '✅ No profanity detected'
+    };
+
     // Calculate content metrics for analysis
     const wordCount = postData.contentMd.split(/\s+/).filter(word => word.length > 0).length;
     const readingTime = Math.ceil(wordCount / 200);
@@ -85,7 +164,6 @@ export async function POST(
     const headings = postData.contentMd.match(/^#+\s+.+$/gm) || [];
     const links = postData.contentMd.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
     const images = postData.contentMd.match(/!\[([^\]]*)\]\(([^)]+)\)/g) || [];
-    const codeBlocks = postData.contentMd.match(/``````/g) || [];
     const bulletPoints = postData.contentMd.match(/^[\*\-\+]\s+/gm) || [];
     
     // SEO Analysis
@@ -94,8 +172,30 @@ export async function POST(
     const metaTitleLength = postData.metaTitle?.length || 0;
     const metaDescLength = postData.metaDescription?.length || 0;
 
+    // Build moderation warning for analysis prompt
+    const moderationWarning = moderationResults.flagged ? `
+
+🚨 **CRITICAL MODERATION ALERT - PROFANITY DETECTED** 🚨
+${moderationResults.recommendation}
+
+**Profanity Detection Results:**
+- Title: ${moderationResults.profanity.locations.title ? '⚠️ FLAGGED' : '✅ Clean'}
+- Content: ${moderationResults.profanity.locations.content ? '⚠️ FLAGGED' : '✅ Clean'}
+- Excerpt: ${moderationResults.profanity.locations.excerpt ? '⚠️ FLAGGED' : '✅ Clean'}
+
+**Details:** ${moderationResults.profanity.details.join('; ')}
+
+**Severity Level:** ${moderationResults.overallSeverity.toUpperCase()}
+
+⚠️ This content should be REJECTED until all inappropriate language is removed.
+
+***
+` : '';
+
     const analysisPrompt = `
 You are conducting a PRE-PUBLICATION content analysis for a blog post that is currently in "${postData.status}" status and awaiting admin approval. This analysis will help the admin decide whether to approve, reject, or request revisions.
+
+${moderationWarning}
 
 **POST SUBMISSION DETAILS:**
 - Title: "${postData.title}"
@@ -115,7 +215,6 @@ You are conducting a PRE-PUBLICATION content analysis for a blog post that is cu
 - Headings: ${headings.length}
 - Links: ${links.length}
 - Images: ${images.length}
-- Code Blocks: ${codeBlocks.length}
 - Bullet Points/Lists: ${bulletPoints.length}
 
 **SEO & METADATA:**
@@ -140,12 +239,21 @@ ${postData.contentMd}
 
 **ADMIN APPROVAL ANALYSIS - Please provide detailed assessment in these areas:**
 
+${moderationResults.flagged ? `
+## ⚠️ PROFANITY ALERT - IMMEDIATE ATTENTION REQUIRED
+This content has been automatically flagged for containing inappropriate/profane language.
+**Locations:** ${Object.entries(moderationResults.profanity.locations).filter(([_, flagged]) => flagged).map(([loc]) => loc).join(', ')}
+**Recommendation:** REJECT this post and request the author remove all inappropriate language before resubmission.
+
+` : ''}
+
 ## 1. Content Quality & Editorial Standards
 - **Content Depth**: Is the content comprehensive and valuable to readers?
 - **Writing Quality**: Grammar, spelling, sentence structure, and flow
 - **Originality**: Does this bring unique value or insight?
 - **Accuracy**: Any factual concerns or claims that need verification?
 - **Tone & Style**: Appropriate for the target audience and platform?
+${moderationResults.profanity.detected ? '- **⚠️ LANGUAGE APPROPRIATENESS**: FLAGGED - Contains profanity/inappropriate language - RECOMMEND REJECTION' : ''}
 
 ## 2. SEO & Technical Optimization
 - **Title Effectiveness**: Is the title compelling and SEO-optimized?
@@ -171,27 +279,29 @@ ${postData.contentMd}
 ## 5. Editorial Recommendations
 
 ### APPROVAL RECOMMENDATION: 
-- ✅ **APPROVE** - Ready for publication
+${moderationResults.profanity.detected ? '- 🚫 **REJECT** - Contains inappropriate/profane language (AUTO-FLAGGED)' : `- ✅ **APPROVE** - Ready for publication
 - ⚠️ **APPROVE WITH MINOR REVISIONS** - Small fixes needed
 - ❌ **REQUEST MAJOR REVISIONS** - Significant improvements required
-- 🚫 **REJECT** - Does not meet publication standards
+- 🚫 **REJECT** - Does not meet publication standards`}
 
 ### Specific Action Items:
+${moderationResults.profanity.detected ? '[PRIORITY] Remove all inappropriate/profane language before resubmission\n' : ''}
 [List 3-5 specific, actionable improvements the author should make]
 
 ### Admin Notes:
+${moderationResults.flagged ? `[AUTOMATED MODERATION ALERT] ${moderationResults.recommendation}\n` : ''}
 [Any concerns or observations for admin consideration]
 
 ## 6. Content Scoring (1-10 scale)
 - **Content Quality**: X/10
 - **SEO Optimization**: X/10  
-- **Editorial Standards**: X/10
-- **Publication Readiness**: X/10
+- **Editorial Standards**: X/10 ${moderationResults.profanity.detected ? '(FLAGGED FOR PROFANITY - Consider 0/10)' : ''}
+- **Publication Readiness**: X/10 ${moderationResults.flagged ? '(FLAGGED BY MODERATION)' : ''}
 - **Overall Score**: X/10
 
-**FINAL RECOMMENDATION**: [Clear guidance for admin approval decision]
+**FINAL RECOMMENDATION**: ${moderationResults.flagged ? '🚫 REJECTION RECOMMENDED due to profanity. ' : ''}[Clear guidance for admin approval decision]
 
----
+***
 Format your response with clear headers and actionable insights that will help the admin make an informed approval decision.
 `;
 
@@ -202,6 +312,7 @@ Format your response with clear headers and actionable insights that will help t
       data: {
         postId,
         analysis,
+        moderationResults,
         prePublicationMetrics: {
           wordCount,
           readingTime,
@@ -209,7 +320,6 @@ Format your response with clear headers and actionable insights that will help t
           headingCount: headings.length,
           linkCount: links.length,
           imageCount: images.length,
-          codeBlockCount: codeBlocks.length,
           bulletPointCount: bulletPoints.length,
           titleLength,
           excerptLength,
@@ -227,6 +337,18 @@ Format your response with clear headers and actionable insights that will help t
 
   } catch (error: any) {
     console.error('Pre-publication analysis error:', error);
+    
+    if (error.message?.includes('safety') || error.message?.includes('SAFETY')) {
+      return NextResponse.json(
+        { 
+          error: 'Content blocked by AI safety filters - likely contains harmful or inappropriate content',
+          moderationBlock: true,
+          details: error.message 
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Failed to analyze post for publication' },
       { status: 500 }
