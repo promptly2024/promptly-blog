@@ -78,6 +78,8 @@ export async function addComment(postId: string, content: string) {
     });
     logAudit(dbUser.id, "comment", postId, "create", {
       content: content.trim(),
+      message: `${dbUser.name} (${dbUser.id}) added a comment (${content.trim().substring(0, 30)}...) to post ${postId}`,
+      success: true,
     });
     revalidatePath(`/blog/${postId}`);
   } catch (error) {
@@ -166,7 +168,7 @@ export async function deleteComment(commentId: string) {
 
     logAudit(dbUser.id, "comment", commentId, "delete", {
       success: true,
-      message: "User deleted their own comment",
+      message: `${dbUser.name} (${dbUser.id}) deleted their comment (${commentId})`,
     });
     revalidatePath(`/blog/${comment.postId}`);
   } catch (error) {

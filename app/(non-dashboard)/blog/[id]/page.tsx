@@ -16,8 +16,10 @@ interface BlogPageProps {
 const getBlogData = async (id: string) => {
     try {
         const userId = await getUserIdFromClerk();
-        // promise all to fetch post and categories concurrently
-        if (!userId) throw new Error("User not authenticated.");
+        // If not authenticated, return a specific error object
+        if (!userId) {
+            return { error: "User not authenticated." };
+        }
 
         const [postData, allCategories] = await Promise.all([
             fetchPostWithCategories(id, userId, true),
@@ -51,6 +53,14 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
     const { id } = await params;
     const result = await getBlogData(id);
     const post = result?.post;
+
+    // Handle unauthenticated error for metadata
+    if (result?.error === "User not authenticated.") {
+        return {
+            title: 'Authentication Required',
+            description: 'You must be logged in to view this blog post.',
+        };
+    }
 
     if (!post) {
         return {
@@ -95,6 +105,11 @@ const BlogPage = async ({ params }: BlogPageProps) => {
     const result = await getBlogData(id);
     const post = result?.post;
 
+    // Handle unauthenticated error for page rendering
+    if (result?.error === "User not authenticated.") {
+        return showError('You must be logged in to view this blog post.');
+    }
+
     if (!result || !post) {
         return showError('Blog post not found or you do not have permission to view this post.');
     }
@@ -119,7 +134,7 @@ const BlogPage = async ({ params }: BlogPageProps) => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <BlogContent post={post} 
+            <BlogContent post={post}
                 reactions={transformedReactions}
                 comments={transformedComments}
             />

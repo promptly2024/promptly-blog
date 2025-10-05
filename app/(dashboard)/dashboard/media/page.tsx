@@ -261,17 +261,6 @@ const MediaManagement = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-                Media Library
-              </h1>
-              <p className="text-slate-600">
-                Manage your images and media files for blog posts
-              </p>
-            </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => window.location.reload()}
@@ -288,8 +277,6 @@ const MediaManagement = () => {
                 <span>Upload Image</span>
               </button>
             </div>
-          </div>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
