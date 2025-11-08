@@ -1,7 +1,3 @@
-// utils/date-formatter.ts
-
-import React from 'react';
-
 export function formatDate(date: string | Date): string {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('en-US', {

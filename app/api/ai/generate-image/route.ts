@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from "@google/genai";
 import { 
-  generateImageWithGemini,
   generateBlogCoverPrompt,
   generateSocialImagePrompt 
 } from '@/utils/imagen4Service';
@@ -36,35 +36,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Add style and aspect ratio to prompt
-    prompt += ` Style: ${style.replace('-', ' ')}. Aspect ratio: ${aspectRatio}.`;
+    prompt += ` Style: ${style.replace('-', ' ')}.`;
 
-    let imageBytes: string;
-    let generatedText: string | undefined;
-    let mimeType: string | undefined;
-    let modelUsed: string;
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not defined");
+    }
 
-    try {
-      // Use Gemini 2.5 Flash Image Preview
-      const geminiResponse = await generateImageWithGemini(prompt);
-      imageBytes = geminiResponse.imageBytes;
-      generatedText = geminiResponse.text;
-      mimeType = geminiResponse.mimeType;
-      modelUsed = "gemini-2.5-flash-image-preview";
-    } catch (error: any) {
-      throw error;
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+    const response = await ai.models.generateImages({
+      model: "imagen-4.0-generate-001",
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        aspectRatio: aspectRatio,
+        outputMimeType: "image/png",
+      },
+    });
+
+    const generatedImage = response.generatedImages?.[0];
+    
+    if (!generatedImage) {
+      console.error("Response structure:", JSON.stringify(response, null, 2));
+      throw new Error("No images generated in response");
     }
     
-    // Upload to your media system
+    const imageData = generatedImage as any;
+    const imageBytes = imageData.image?.imageBytes || imageData.imageBytes;
+    
+    if (!imageBytes) {
+      console.error("Generated image structure:", JSON.stringify(generatedImage, null, 2));
+      throw new Error("No image bytes found in response");
+    }
+
+    const modelUsed = "imagen-4.0-generate-001";
+    
     const uploadResponse = await fetch(`${request.nextUrl.origin}/api/media/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         imageBytes: imageBytes,
         altText: `AI generated: ${title}`,
-        provider: 'gemini-image',
+        provider: 'imagen-4',
         type: 'generated',
-        mimeType: mimeType
+        mimeType: 'image/png'
       }),
     });
 
@@ -79,9 +94,8 @@ export async function POST(request: NextRequest) {
       success: true,
       media: uploadData.media,
       prompt: prompt,
-      generatedText: generatedText || null,
       model: modelUsed,
-      mimeType: mimeType
+      mimeType: 'image/png'
     });
 
   } catch (error: any) {

@@ -1,51 +1,54 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 export interface GeneratedImageResult {
   imageBytes: string;
   mimeType?: string;
 }
 
-// Used Gemini 2.5 Flash Image Preview
 export const generateImageWithGemini = async (
-  prompt: string
-): Promise<{ imageBytes: string; text?: string; mimeType?: string }> => {
+  prompt: string,
+  aspectRatio: string = "16:9"
+): Promise<{ imageBytes: string; mimeType?: string }> => {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not defined");
   }
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash-image-preview" 
-  });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   try {
-    const result = await model.generateContent([prompt]);
-    const response = result.response;
-    
-    let imageBytes = "";
-    let text = "";
-    let mimeType = "";
-    
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.text) {
-        text += part.text;
-      } else if (part.inlineData) {
-        imageBytes = part.inlineData.data;
-        mimeType = part.inlineData.mimeType || "image/png";
-      }
-    }
+    const response = await ai.models.generateImages({
+      model: "imagen-4.0-generate-001",
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        aspectRatio: aspectRatio,
+        outputMimeType: "image/png",
+      },
+    });
 
-    if (!imageBytes) {
+    const generatedImage = response.generatedImages?.[0];
+    
+    if (!generatedImage) {
       throw new Error("No image generated in response");
     }
+    
+    const imageData = generatedImage as any;
+    const imageBytes = imageData.image?.imageBytes || imageData.imageBytes;
+    
+    if (!imageBytes) {
+      console.error("Generated image object:", JSON.stringify(generatedImage, null, 2));
+      throw new Error("Could not extract image bytes from response");
+    }
 
-    return { imageBytes, text, mimeType };
+    return {
+      imageBytes: imageBytes,
+      mimeType: "image/png",
+    };
   } catch (error: any) {
-    throw new Error(`Gemini image generation failed: ${error.message}`);
+    throw new Error(`Imagen generation failed: ${error.message}`);
   }
 };
 
-// Enhanced prompt generation with better context
 export const generateBlogCoverPrompt = (title: string, contentMD?: string): string => {
   let contextualInfo = "";
   if (contentMD) {
@@ -63,7 +66,6 @@ export const generateBlogCoverPrompt = (title: string, contentMD?: string): stri
   return `Create a professional blog cover image for "${title}"${contextualInfo}. Design should be modern, clean, and visually striking with high contrast elements. Include subtle text overlay space, use contemporary color palette, ensure social media compatibility. Style: minimalist, professional, eye-catching. Format: 16:9 aspect ratio, high resolution.`;
 };
 
-// Social media optimized prompt
 export const generateSocialImagePrompt = (title: string, platform: 'twitter' | 'linkedin' | 'instagram' = 'twitter'): string => {
   const platformSpecs = {
     twitter: "Twitter/X post image, 16:9 ratio, bold text overlay",

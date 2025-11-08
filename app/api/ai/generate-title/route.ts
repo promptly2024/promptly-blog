@@ -63,7 +63,15 @@ Return only the titles, each on a new line:`;
         }
 
         const response = await generateGeminiResponse(prompt);
+        
+        if (!response || !response.trim()) {
+            throw new Error('No response generated from AI');
+        }
         const titles = response.split('\n').filter(title => title.trim());
+
+        if (titles.length === 0) {
+            throw new Error('No valid titles generated');
+        }
         
         // Return the first title or a random one from the generated titles
         const selectedTitle = titles[Math.floor(Math.random() * titles.length)] || titles[0];

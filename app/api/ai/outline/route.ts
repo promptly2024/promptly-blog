@@ -3,9 +3,7 @@ import { generateGeminiResponse } from '@/utils/generateGeminiResponse';
 import type { OutlineRequest, AIResponse, OutlineResponse } from '@/lib/ai/types';
 import { createOutlinePrompt } from '@/lib/ai/prompt';
 
-// Utility function to extract JSON from markdown code blocks
 function extractJSONFromResponse(response: string): string {
-  // Remove markdown code blocks if present
   const codeBlockPattern = /```(?:json)?\s*([\s\S]*?)\s*```/;
   const match = response.match(codeBlockPattern);
   
@@ -13,7 +11,6 @@ function extractJSONFromResponse(response: string): string {
     return match[1].trim();
   }
   
-  // If no code blocks, return the original response trimmed
   return response.trim();
 }
 
@@ -30,14 +27,16 @@ export async function POST(request: NextRequest) {
 
     const prompt = createOutlinePrompt(body);
     const response = await generateGeminiResponse(prompt);
-    
-    // Extract JSON from potential markdown code blocks
+
+    if (!response || !response.trim()) {
+      throw new Error('No response generated from AI');
+    }
+
     const cleanedResponse = extractJSONFromResponse(response);
     
     try {
       const outline: OutlineResponse = JSON.parse(cleanedResponse);
       
-      // Validate the response structure
       if (!outline.outline || !Array.isArray(outline.outline)) {
         throw new Error('Invalid outline structure received');
       }

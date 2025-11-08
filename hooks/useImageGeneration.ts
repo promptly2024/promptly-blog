@@ -25,7 +25,6 @@ export const useImageGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<DBResponse | null>(null);
   const [usedPrompt, setUsedPrompt] = useState<string>('');
-  const [generatedText, setGeneratedText] = useState<string>('');
   const [usedModel, setUsedModel] = useState<string>('');
 
   const generateImage = async (options: GenerateImageOptions) => {
@@ -51,11 +50,10 @@ export const useImageGeneration = () => {
       const data = await response.json();
       setGeneratedImage(data.media);
       setUsedPrompt(data.prompt);
-      setGeneratedText(data.generatedText || '');
       setUsedModel(data.model);
       
-      toast.success('🎨 Image Generated Successfully!', {
-        description: 'Created using Gemini 2.5 Flash Image Preview'
+      toast.success('Image Generated Successfully!', {
+        description: 'Created using Imagen 4.0'
       });
 
       return data.media;
@@ -72,7 +70,6 @@ export const useImageGeneration = () => {
   const resetGeneration = () => {
     setGeneratedImage(null);
     setUsedPrompt('');
-    setGeneratedText('');
     setUsedModel('');
   };
 
@@ -81,7 +78,6 @@ export const useImageGeneration = () => {
     isGenerating,
     generatedImage,
     usedPrompt,
-    generatedText,
     usedModel,
     resetGeneration
   };
