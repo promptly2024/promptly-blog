@@ -5,8 +5,8 @@ import { serializeDocument } from '@/utils/date-formatter';
 import { showError } from '@/app/(non-dashboard)/edit/[id]/page';
 import { getUserIdFromClerk, fetchPostWithCategories, fetchAllCategories } from '@/utils/blog-helper';
 import BlogContent from '@/components/BlogContent';
+import { BookmarkButton } from '@/components/Bookmark/BookmarkButton';
 
-/// Define the expected type for the props
 interface BlogPageProps {
     params: Promise<{
         id: string;
@@ -16,18 +16,16 @@ interface BlogPageProps {
 const getBlogData = async (id: string) => {
     try {
         const userId = await getUserIdFromClerk();
-        // If not authenticated, return a specific error object
         if (!userId) {
             return { error: "User not authenticated." };
         }
 
         const [postData, allCategories] = await Promise.all([
-            fetchPostWithCategories(id, userId, true),
+            fetchPostWithCategories(id, userId, false),
             fetchAllCategories()
         ]);
         if (!postData) return null;
 
-        // Serialize post and categories
         const serializedPost = serializeDocument(postData) as BlogType & {
             reactionCounts: any;
             userReactions: any;
@@ -48,13 +46,11 @@ const getBlogData = async (id: string) => {
     }
 };
 
-// Generate metadata for SEO
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
     const { id } = await params;
     const result = await getBlogData(id);
     const post = result?.post;
 
-    // Handle unauthenticated error for metadata
     if (result?.error === "User not authenticated.") {
         return {
             title: 'Authentication Required',
@@ -69,7 +65,6 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
         };
     }
 
-    // Use custom meta fields if available, otherwise fall back to defaults
     const title = post.metaTitle || post.title;
     const description = post.metaDescription || post.excerpt || 'Read this blog post';
 
@@ -105,7 +100,6 @@ const BlogPage = async ({ params }: BlogPageProps) => {
     const result = await getBlogData(id);
     const post = result?.post;
 
-    // Handle unauthenticated error for page rendering
     if (result?.error === "User not authenticated.") {
         return showError('You must be logged in to view this blog post.');
     }
@@ -134,7 +128,12 @@ const BlogPage = async ({ params }: BlogPageProps) => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <BlogContent post={post}
+            <div className="flex justify-end mb-6">
+                <BookmarkButton postId={post.id} />
+            </div>
+
+            <BlogContent 
+                post={post}
                 reactions={transformedReactions}
                 comments={transformedComments}
             />

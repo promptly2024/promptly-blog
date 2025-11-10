@@ -485,3 +485,25 @@ export const contactQueries = pgTable(
         idxContactStatus: index("idx_contact_status").on(t.status),
     })
 );
+
+export const bookmarks = pgTable(
+    "bookmarks",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        userId: uuid("user_id").notNull().references(() => user.id),
+        postId: uuid("post_id").notNull().references(() => posts.id),
+        
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (t) => ({
+        // Ensure a user can only bookmark a post once
+        uqUserPostBookmark: uniqueIndex("uq_bookmarks_user_post").on(
+            t.userId,
+            t.postId
+        ),
+        idxBookmarksUser: index("idx_bookmarks_user").on(t.userId),
+        idxBookmarksPost: index("idx_bookmarks_post").on(t.postId),
+    })
+);

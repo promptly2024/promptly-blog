@@ -45,7 +45,6 @@ export const fetchPostWithCategories = async (
     const postId = await resolvePostId(idOrSlug);
     if (!postId) throw new Error("Post not found.");
 
-    // Main post query with cover image - Select media fields separately
     const postResult = await db
         .select({
             id: posts.id,
@@ -65,7 +64,6 @@ export const fetchPostWithCategories = async (
             updatedAt: posts.updatedAt,
             deletedAt: posts.deletedAt,
 
-            // Select media fields separately (not nested)
             mediaId: media.id,
             mediaUrl: media.url,
             mediaType: media.type,
@@ -88,7 +86,6 @@ export const fetchPostWithCategories = async (
     if (postResult.length === 0) throw new Error("Post not found or not yours.");
     const post = postResult[0];
 
-    // Manually construct coverImage object
     const coverImage = post.mediaId ? {
         id: post.mediaId,
         url: post.mediaUrl,
@@ -261,12 +258,11 @@ export const fetchPostWithCategories = async (
         };
     });
 
-    // Destructure to remove media fields from the final post object
     const { mediaId, mediaUrl, mediaType, mediaAltText, mediaProvider, ...postWithoutMedia } = post;
 
     return {
         ...postWithoutMedia,
-        coverImage, // Add the constructed coverImage object
+        coverImage,
         categories: cats.map(serializeDocument),
         reactionCounts: reactionCountsFormatted,
         userReactions: userReactionsFormatted,

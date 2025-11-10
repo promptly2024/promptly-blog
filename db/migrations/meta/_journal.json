@@ -43,6 +43,13 @@
       "when": 1759130450753,
       "tag": "0005_nifty_xorn",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762803886738,
+      "tag": "0006_amused_cannonball",
+      "breakpoints": true
     }
   ]
 }
