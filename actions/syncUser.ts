@@ -1,4 +1,3 @@
-// actions/syncUser.ts
 import { user } from "@/db/schema";
 import { db } from "@/lib/db";
 import { currentUser } from "@clerk/nextjs/server";
