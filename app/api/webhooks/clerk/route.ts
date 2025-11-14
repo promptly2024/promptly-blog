@@ -5,14 +5,15 @@ import { db } from '@/lib/db';
 import { user } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '@/actions/logAudit';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   console.log('Received Clerk webhook');
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
-    console.warn('Missing CLERK_WEBHOOK_SECRET environment variable');
-    throw new Error('Missing CLERK_WEBHOOK_SECRET environment variable');
+    console.error('Missing CLERK_WEBHOOK_SECRET environment variable');
+    return NextResponse.json('Server misconfiguration', { status: 500 });
   }
 
   const headerPayload = await headers();
@@ -22,108 +23,127 @@ export async function POST(req: Request) {
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
     console.error('Missing svix headers');
-    return new Response('Error: Missing svix headers', { 
-      status: 400 
-    });
+    return NextResponse.json('Missing svix headers', { status: 400 });
   }
 
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
+  const rawBody = await req.text();
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (err) {
+    console.error('Invalid JSON payload');
+    return NextResponse.json('Invalid JSON payload', { status: 400 });
+  }
 
   const wh = new Webhook(WEBHOOK_SECRET);
-
-  let evt: WebhookEvent;
+  let evt: WebhookEvent | null = null;
 
   try {
-    evt = wh.verify(body, {
+    // verify using rawBody to preserve exact signature
+    evt = wh.verify(rawBody, {
       'svix-id': svix_id,
       'svix-timestamp': svix_timestamp,
       'svix-signature': svix_signature,
     }) as WebhookEvent;
   } catch (err) {
     console.error('Error verifying webhook:', err);
-    return new Response('Error: Verification failed', { 
-      status: 400 
-    });
+    return NextResponse.json('Webhook verification failed', { status: 400 });
   }
 
   const adminEmail = ['rohitkuyada@gmail.com'];
-  const eventType = evt.type;
+  const eventType = (evt?.type ?? payload?.type) as string | undefined;
 
   if (eventType === 'user.created') {
     console.log('Processing user.created event');
-    const { id, email_addresses, first_name, last_name, image_url, public_metadata } = evt.data;
+    const data = (evt?.data ?? payload?.data) as any;
+    const { id, email_addresses, first_name, last_name, image_url, public_metadata } = data ?? {};
+    console.log('User data:', data);
+    if (!id) return NextResponse.json('Missing user id', { status: 400 });
 
-    console.log('\n\nUser data received:', evt.data);
-    // Check if user already exists
+    const primaryEmail = (email_addresses && email_addresses[0]?.email_address) ? String(email_addresses[0].email_address).toLowerCase().trim() : '';
+
+    let createdUser: any = null;
+    let alreadyExists = false;
+
     try {
-      const existingUser = await db.select().from(user).where(eq(user.clerkId, id)).limit(1);
-      if (existingUser.length > 0) {
-        console.log('User already exists, skipping creation:', existingUser[0]?.email);
-        return new Response('User already exists', { status: 200 });
-      }
-      const newUser = await db.insert(user).values({
-        clerkId: id,
-        name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
-        email: email_addresses[0]?.email_address ?? "",
-        avatarUrl: image_url ?? null,
-        siteRole: adminEmail.includes(email_addresses[0]?.email_address ?? "") 
-          ? "admin" 
-          : "user",
-        bio: typeof public_metadata?.bio === "string" ? public_metadata.bio : null,
-      }).returning();
+      await db.transaction(async (tx) => {
+        const existingUser = await tx.select().from(user).where(eq(user.clerkId, id)).limit(1);
+        if (existingUser.length > 0) {
+          alreadyExists = true;
+          return;
+        }
 
-      if (newUser.length > 0) {
-        await logAudit(newUser[0].id, "user", newUser[0].id, "create", {
-          email: newUser[0].email,
-          siteRole: newUser[0].siteRole,
-        });
-      }
+        const res = await tx.insert(user).values({
+          clerkId: id,
+          name: `${first_name ?? ''} ${last_name ?? ''}`.trim(),
+          email: primaryEmail,
+          avatarUrl: image_url ?? null,
+          siteRole: adminEmail.includes(primaryEmail) ? 'admin' : 'user',
+          bio: typeof public_metadata?.bio === 'string' ? public_metadata.bio : null,
+        }).returning();
 
-      console.log('User created:', newUser[0]?.email);
-    } catch (error) {
-      console.error('Error creating user:', error);
-      return new Response('Error: Failed to create user', { 
-        status: 500 
+        createdUser = res[0] ?? null;
       });
+    } catch (error) {
+      console.error('Error creating user (transaction):', error);
+      return NextResponse.json('Failed to create user', { status: 500 });
+    }
+
+    if (alreadyExists) {
+      return NextResponse.json('User already exists', { status: 200 });
+    }
+
+    if (createdUser) {
+      try {
+        // logAudit may be independent; log but do not fail webhook processing if audit fails
+        await logAudit(createdUser.id, 'user', createdUser.id, 'create', {
+          email: createdUser.email,
+          siteRole: createdUser.siteRole,
+        });
+      } catch (err) {
+        console.error('Failed to write audit log:', err);
+      }
     }
   }
 
   if (eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name, image_url, public_metadata } = evt.data;
+    const data = (evt?.data ?? payload?.data) as any;
+    const { id, email_addresses, first_name, last_name, image_url, public_metadata } = data ?? {};
+    if (!id) return new Response('Missing user id', { status: 400 });
+
+    const primaryEmail = (email_addresses && email_addresses[0]?.email_address) ? String(email_addresses[0].email_address).toLowerCase().trim() : '';
 
     try {
-      await db.update(user)
-        .set({
-          name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
-          email: email_addresses[0]?.email_address ?? "",
-          avatarUrl: image_url ?? null,
-          bio: typeof public_metadata?.bio === "string" ? public_metadata.bio : null,
-        })
-        .where(eq(user.clerkId, id));
-
-      console.log('User updated:', email_addresses[0]?.email_address);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      return new Response('Error: Failed to update user', { 
-        status: 500 
+      await db.transaction(async (tx) => {
+        await tx.update(user)
+          .set({
+            name: `${first_name ?? ''} ${last_name ?? ''}`.trim(),
+            email: primaryEmail,
+            avatarUrl: image_url ?? null,
+            bio: typeof public_metadata?.bio === 'string' ? public_metadata.bio : null,
+          })
+          .where(eq(user.clerkId, id));
       });
+    } catch (error) {
+      console.error('Error updating user (transaction):', error);
+      return NextResponse.json('Failed to update user', { status: 500 });
     }
   }
 
   if (eventType === 'user.deleted') {
-    const { id } = evt.data;
+    const data = (evt?.data ?? payload?.data) as any;
+    const { id } = data ?? {};
+    if (!id) return NextResponse.json('Missing user id', { status: 400 });
 
     try {
-      await db.delete(user).where(eq(user.clerkId, id!));
-      console.log('User deleted:', id);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      return new Response('Error: Failed to delete user', { 
-        status: 500 
+      await db.transaction(async (tx) => {
+        await tx.delete(user).where(eq(user.clerkId, id));
       });
+    } catch (error) {
+      console.error('Error deleting user (transaction):', error);
+      return NextResponse.json('Failed to delete user', { status: 500 });
     }
   }
 
-  return new Response('Webhook processed successfully', { status: 200 });
+  return NextResponse.json('Webhook processed successfully', { status: 200 });
 }
